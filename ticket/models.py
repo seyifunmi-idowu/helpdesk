@@ -1,5 +1,5 @@
 from django.db import models
-from core.models import User, SupportGroup, SupportTeam # Assuming User, SupportGroup, SupportTeam models are in the core app
+# from core.models import User, SupportGroup, SupportTeam # Moved to string references
 
 class Ticket(models.Model):
     source = models.CharField(max_length=191)
@@ -25,13 +25,13 @@ class Ticket(models.Model):
     status = models.ForeignKey('TicketStatus', on_delete=models.SET_NULL, null=True, blank=True)
     priority = models.ForeignKey('TicketPriority', on_delete=models.SET_NULL, null=True, blank=True)
     type = models.ForeignKey('TicketType', on_delete=models.SET_NULL, null=True, blank=True)
-    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tickets_as_customer')
-    agent = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets_as_agent')
-    supportGroup = models.ForeignKey(SupportGroup, on_delete=models.SET_NULL, null=True, blank=True)
-    supportTeam = models.ForeignKey(SupportTeam, on_delete=models.SET_NULL, null=True, blank=True)
+    customer = models.ForeignKey('core.User', on_delete=models.CASCADE, related_name='tickets_as_customer')
+    agent = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets_as_agent')
+    supportGroup = models.ForeignKey('core.SupportGroup', on_delete=models.SET_NULL, null=True, blank=True)
+    supportTeam = models.ForeignKey('core.SupportTeam', on_delete=models.SET_NULL, null=True, blank=True)
 
     # ManyToMany relationships with explicit through tables
-    collaborators = models.ManyToManyField(User, related_name='tickets_as_collaborator', through='TicketCollaboratorsThrough')
+    collaborators = models.ManyToManyField('core.User', related_name='tickets_as_collaborator', through='TicketCollaboratorsThrough')
     supportTags = models.ManyToManyField('Tag', related_name='tickets_with_tag', through='TicketTagsThrough')
     supportLabels = models.ManyToManyField('SupportLabel', related_name='tickets_with_label', through='TicketLabelsThrough')
 
@@ -45,7 +45,7 @@ class Ticket(models.Model):
 
 class TicketCollaboratorsThrough(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('core.User', on_delete=models.CASCADE)
 
     class Meta:
         db_table = "uv_tickets_collaborators"
@@ -69,7 +69,7 @@ class TicketLabelsThrough(models.Model):
 
 class Thread(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='threads')
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, blank=True)
     source = models.CharField(max_length=191)
     messageId = models.TextField(null=True, blank=True)
     threadType = models.CharField(max_length=191)
@@ -125,7 +125,7 @@ class Tag(models.Model):
 class SupportLabel(models.Model):
     name = models.CharField(max_length=191)
     colorCode = models.CharField(max_length=191, null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey('core.User', on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Support Label"
@@ -180,7 +180,7 @@ class TicketRating(models.Model):
     feedback = models.TextField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='ratings')
-    customer = models.ForeignKey(User, on_delete=models.CASCADE)
+    customer = models.ForeignKey('core.User', on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Ticket Rating"
@@ -195,12 +195,12 @@ class SavedReplies(models.Model):
     subject = models.CharField(max_length=255, null=True, blank=True)
     message = models.TextField()
     templateId = models.IntegerField(null=True, blank=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True) # Assuming User is the correct foreign key
+    user = models.ForeignKey('core.User', on_delete=models.CASCADE, null=True, blank=True) # Assuming User is the correct foreign key
     isPredefind = models.BooleanField(default=True, null=True, blank=True)
     messageInline = models.TextField(null=True, blank=True)
     templateFor = models.CharField(max_length=255, null=True, blank=True)
-    groups = models.ManyToManyField(SupportGroup, related_name='saved_replies_groups', through='SavedRepliesGroupsThrough')
-    teams = models.ManyToManyField(SupportTeam, related_name='saved_replies_teams', through='SavedRepliesTeamsThrough')
+    groups = models.ManyToManyField('core.SupportGroup', related_name='saved_replies_groups', through='SavedRepliesGroupsThrough')
+    teams = models.ManyToManyField('core.SupportTeam', related_name='saved_replies_teams', through='SavedRepliesTeamsThrough')
 
     class Meta:
         verbose_name = "Saved Reply"
@@ -212,7 +212,7 @@ class SavedReplies(models.Model):
 
 class SavedRepliesGroupsThrough(models.Model):
     savedReply = models.ForeignKey(SavedReplies, on_delete=models.CASCADE)
-    group = models.ForeignKey(SupportGroup, on_delete=models.CASCADE)
+    group = models.ForeignKey('core.SupportGroup', on_delete=models.CASCADE)
 
     class Meta:
         db_table = "uv_saved_replies_groups"
@@ -220,8 +220,24 @@ class SavedRepliesGroupsThrough(models.Model):
 
 class SavedRepliesTeamsThrough(models.Model):
     savedReply = models.ForeignKey(SavedReplies, on_delete=models.CASCADE)
-    team = models.ForeignKey(SupportTeam, on_delete=models.CASCADE)
+    team = models.ForeignKey('core.SupportTeam', on_delete=models.CASCADE)
 
     class Meta:
         db_table = "uv_saved_replies_teams"
         unique_together = ('savedReply', 'team')
+
+class AgentActivity(models.Model):
+    agent = models.ForeignKey('core.User', on_delete=models.CASCADE)
+    ticket = models.ForeignKey('Ticket', on_delete=models.CASCADE)
+    agentName = models.CharField(max_length=255, null=True, blank=True)
+    customerName = models.CharField(max_length=255, null=True, blank=True)
+    threadType = models.CharField(max_length=255, null=True, blank=True)
+    createdAt = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Agent Activity"
+        verbose_name_plural = "Agent Activities"
+        db_table = "uv_agent_activity"
+
+    def __str__(self):
+        return f"{self.agent.email} - {self.action} at {self.createdAt}"

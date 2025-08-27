@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
-from django.utils import timezone
-from ticket.models import Ticket # Import Ticket model
+from django.utils import timezone as django_timezone
+# from ticket.models import Ticket # Import Ticket model (moved to string reference)
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -38,7 +38,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True) # Maps to isEnabled for Django's internal use
-    date_joined = models.DateTimeField(default=timezone.now)
+    date_joined = models.DateTimeField(default=django_timezone.now)
 
     objects = UserManager()
 
@@ -158,22 +158,6 @@ class SupportTeam(models.Model):
 
     def __str__(self):
         return self.name
-
-class AgentActivity(models.Model):
-    agent = models.ForeignKey(User, on_delete=models.CASCADE)
-    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
-    agentName = models.CharField(max_length=255, null=True, blank=True)
-    customerName = models.CharField(max_length=255, null=True, blank=True)
-    threadType = models.CharField(max_length=255, null=True, blank=True)
-    createdAt = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Agent Activity"
-        verbose_name_plural = "Agent Activities"
-        db_table = "uv_agent_activity"
-
-    def __str__(self):
-        return f"{self.agent.email} - {self.action} at {self.createdAt}"
 
 class SupportPrivilege(models.Model):
     name = models.CharField(max_length=191)
