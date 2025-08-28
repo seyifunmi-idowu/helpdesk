@@ -119,3 +119,7 @@ venv.bak/
 
 # Visual Studio Code files
 .vscode/
+
+# Static files
+static/
+staticfiles/
