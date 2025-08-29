@@ -25,12 +25,17 @@ urlpatterns = [
     path('teams/<int:team_id>/edit/', views.team_edit, name='team_edit'),
     path('teams/<int:team_id>/delete/', views.team_delete, name='team_delete'),
 
+
     # Agents
+    path('agents/', views.agent_list, name='agent_list'),
     path('agents/invite/', views.agent_invite, name='agent_invite'),
+    path('agents/create/', views.create_agent, name='create_agent'),
+    path('agents/<int:agent_id>/edit/', views.agent_edit, name='agent_edit'),
+    path('agents/<int:agent_id>/delete/', views.agent_delete, name='agent_delete'),
 
     # Password reset links (built-in)
     path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
-    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='registration/password_reset_complete.html'), name='password_reset_complete'),
 ]

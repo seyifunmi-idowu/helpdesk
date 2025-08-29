@@ -48,11 +48,11 @@
                         </div>
                         <div class="card-body p-0">
                             <ul class="list-group list-group-flush">
-                                <li class="list-group-item"><a href="#"><i class="fas fa-user-tie fa-fw mr-2"></i> Agents</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-users fa-fw mr-2"></i> Customers</a></li>
+                                <li class="list-group-item"><a href="{% url 'agent_list' %}"><i class="fas fa-user-tie fa-fw mr-2"></i> Agents</a></li>
+                                <li class="list-group-item"><a href="{% url 'agent_list' %}"><i class="fas fa-users fa-fw mr-2"></i> Customers</a></li>
                                 <li class="list-group-item"><a href="{% url 'group_list' %}"><i class="fas fa-layer-group fa-fw mr-2"></i> Groups</a></li>
                                 <li class="list-group-item"><a href="{% url 'privilege_list' %}"><i class="fas fa-key fa-fw mr-2"></i> Privileges</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-user-friends fa-fw mr-2"></i> Teams</a></li>
+                                <li class="list-group-item"><a href="{% url 'team_list' %}"><i class="fas fa-user-friends fa-fw mr-2"></i> Teams</a></li>
                             </ul>
                         </div>
                     </div>

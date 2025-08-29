@@ -23,7 +23,13 @@ class UserManager(BaseUserManager):
         if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
 
-        return self.create_user(email, password, **extra_fields)
+        user = self.create_user(email, password, **extra_fields)
+
+        # Create a UserInstance for the superuser
+        agent_role, _ = SupportRole.objects.get_or_create(code='ROLE_AGENT')
+        UserInstance.objects.create(user=user, supportRole=agent_role, isActive=True, source='superuser_creation')
+
+        return user
 
 
 class User(AbstractBaseUser, PermissionsMixin):

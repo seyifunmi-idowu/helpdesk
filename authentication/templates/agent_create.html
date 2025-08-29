@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>Create Agent</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="#">Home</a></li>
+                        <li class="breadcrumb-item active">Create Agent</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Agent Details</h3>
+                </div>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- General Section -->
+                            <div class="col-md-6">
+                                <div class="card card-info">
+                                    <div class="card-header">
+                                        <h3 class="card-title">GENERAL</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label for="id_profileImage">Upload a Profile Image (100px x 100px) in PNG or JPG Format</label>
+                                            {{ user_instance_form.profileImage }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="id_firstName">First Name</label>
+                                            {{ user_form.firstName }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="id_lastName">Last Name</label>
+                                            {{ user_form.lastName }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="id_email">Email</label>
+                                            {{ user_form.email }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="id_designation">Designation</label>
+                                            {{ user_instance_form.designation }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="id_contactNumber">Contact Number</label>
+                                            {{ user_instance_form.contactNumber }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="id_signature">Signature</label>
+                                            {{ user_instance_form.signature }}
+                                            <small class="form-text text-muted">Your signature will be appended to the bottom of every ticket reply you create.</small>
+                                        </div>
+                                        <div class="form-group form-check">
+                                            {{ user_instance_form.isActive }} <label class="form-check-label" for="id_isActive">Account is Active</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Groups Section -->
+                            <div class="col-md-6">
+                                <div class="card card-warning">
+                                    <div class="card-header">
+                                        <h3 class="card-title">GROUPS</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label>Groups</label>
+                                            <p class="text-muted">Add user to group to view tickets regardless of owner.</p>
+                                            {{ user_instance_form.supportGroups }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Teams</label>
+                                            <p class="text-muted">Add user to team to view tickets regardless of owner.</p>
+                                            {{ user_instance_form.supportTeams }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Permissions Section -->
+                                <div class="card card-danger">
+                                    <div class="card-header">
+                                        <h3 class="card-title">PERMISSIONS</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label for="id_supportRole">Role</label>
+                                            {{ user_instance_form.supportRole }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Agent Privileges</label>
+                                            <p class="text-muted">Agent privilege represents overall permissions in your helpdesk.</p>
+                                            {{ user_instance_form.supportPrivileges }}
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="id_ticketAccessLevel">Ticket View</label>
+                                            <p class="text-muted">User can view tickets based on selected scope. [?]</p>
+                                            {{ user_instance_form.ticketAccessLevel }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
