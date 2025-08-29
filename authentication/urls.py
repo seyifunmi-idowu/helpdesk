@@ -1,11 +1,32 @@
 from django.urls import path, include
-from .views import dashboard
+from . import views
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('', dashboard, name='dashboard'),
+    path('', views.dashboard, name='dashboard'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+
+    # Privileges
+    path('privileges/', views.privilege_list, name='privilege_list'),
+    path('privileges/create/', views.privilege_create, name='privilege_create'),
+    path('privileges/<int:privilege_id>/edit/', views.privilege_edit, name='privilege_edit'),
+    path('privileges/<int:privilege_id>/delete/', views.privilege_delete, name='privilege_delete'),
+
+    # Groups
+    path('groups/', views.group_list, name='group_list'),
+    path('groups/create/', views.group_create, name='group_create'),
+    path('groups/<int:group_id>/edit/', views.group_edit, name='group_edit'),
+    path('groups/<int:group_id>/delete/', views.group_delete, name='group_delete'),
+
+    # Teams
+    path('teams/', views.team_list, name='team_list'),
+    path('teams/create/', views.team_create, name='team_create'),
+    path('teams/<int:team_id>/edit/', views.team_edit, name='team_edit'),
+    path('teams/<int:team_id>/delete/', views.team_delete, name='team_delete'),
+
+    # Agents
+    path('agents/invite/', views.agent_invite, name='agent_invite'),
 
     # Password reset links (built-in)
     path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),

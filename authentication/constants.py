@@ -1,0 +1,38 @@
+PRIVILEGE_CHOICES = {
+    'ticket': {
+        'ROLE_AGENT_CREATE_TICKET': 'Can create ticket',
+        'ROLE_AGENT_EDIT_TICKET': 'Can edit ticket',
+        'ROLE_AGENT_DELETE_TICKET': 'Can delete ticket',
+        'ROLE_AGENT_RESTORE_TICKET': 'Can restore trashed ticket',
+        'ROLE_AGENT_ASSIGN_TICKET': 'Can assign ticket',
+        'ROLE_AGENT_ASSIGN_TICKET_GROUP': 'Can assign ticket group',
+        'ROLE_AGENT_UPDATE_TICKET_STATUS': 'Can update ticket status',
+        'ROLE_AGENT_UPDATE_TICKET_PRIORITY': 'Can update ticket priority',
+        'ROLE_AGENT_UPDATE_TICKET_TYPE': 'Can update ticket type',
+        'ROLE_AGENT_ADD_NOTE': 'Can add internal notes to ticket',
+        'ROLE_AGENT_EDIT_THREAD_NOTE': 'Can edit thread/notes',
+        'ROLE_AGENT_MANAGE_LOCK_AND_UNLOCK_THREAD': 'Can lock/unlock thread',
+        'ROLE_AGENT_ADD_COLLABORATOR_TO_TICKET': 'Can add collaborator to ticket',
+        'ROLE_AGENT_DELETE_COLLABORATOR_FROM_TICKET': 'Can delete collaborator from ticket',
+        'ROLE_AGENT_DELETE_THREAD_NOTE': 'Can delete thread/notes',
+        'ROLE_AGENT_APPLY_WORKFLOW': 'Can apply prepared response on ticket',
+        'ROLE_AGENT_ADD_TAG': 'Can add ticket tags',
+        'ROLE_AGENT_DELETE_TAG': 'Can delete ticket tags'
+    },
+    'advanced': {
+        'ROLE_AGENT_MANAGE_EMAIL_TEMPLATE': 'Can manage email templates',
+        'ROLE_AGENT_MANAGE_GROUP': 'Can manage groups',
+        'ROLE_AGENT_MANAGE_SUB_GROUP': 'Can manage Sub-Groups/ Teams',
+        'ROLE_AGENT_MANAGE_AGENT': 'Can manage agents',
+        'ROLE_AGENT_MANAGE_AGENT_PRIVILEGE': 'Can manage agent privileges',
+        'ROLE_AGENT_MANAGE_TICKET_TYPE': 'Can manage ticket types',
+        'ROLE_AGENT_MANAGE_CUSTOMER': 'Can manage customers',
+        'ROLE_AGENT_MANAGE_WORKFLOW_MANUAL': 'Can manage Prepared Responses',
+        'ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC': 'Can manage Automatic workflow',
+        'ROLE_AGENT_MANAGE_TAG': 'Can manage tags',
+        'ROLE_AGENT_MANAGE_KNOWLEDGEBASE': 'Can manage knowledgebase',
+        'ROLE_AGENT_MANAGE_AGENT_ACTIVITY': "Can manage agent activity",
+        'ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT': "Can manage marketing announcement",
+        'ROLE_AGENT_MANAGE_APP': "Can manage apps",
+    }
+}

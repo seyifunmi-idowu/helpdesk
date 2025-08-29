@@ -68,7 +68,7 @@ class UserInstance(models.Model):
     contactNumber = models.CharField(max_length=191, null=True, blank=True)
     designation = models.CharField(max_length=191, null=True, blank=True)
     signature = models.TextField(null=True, blank=True)
-    profileImagePath = models.TextField(null=True, blank=True)
+    profileImage = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
     updatedAt = models.DateTimeField(auto_now=True)
     isActive = models.BooleanField(default=False)
@@ -77,14 +77,14 @@ class UserInstance(models.Model):
     ticketAccessLevel = models.CharField(max_length=32, null=True, blank=True)
     defaultFiltering = models.IntegerField(null=True, blank=True)
 
-    # supportRole = models.ForeignKey('SupportRole', on_delete=models.CASCADE)
-    # supportPrivileges = models.ManyToManyField('SupportPrivilege', related_name='user_instances_with_privilege')
-    # supportTeams = models.ManyToManyField('SupportTeam', related_name='user_instances_in_team')
-    # supportGroups = models.ManyToManyField('SupportGroup', related_name='user_instances_in_group')
-    #
-    # # Custom ManyToMany relationships with explicit through tables
-    # leadSupportTeams = models.ManyToManyField('SupportTeam', related_name='lead_user_instances', through='LeadSupportTeamThrough')
-    # adminSupportGroups = models.ManyToManyField('SupportGroup', related_name='admin_user_instances', through='AdminSupportGroupThrough')
+    supportRole = models.ForeignKey('SupportRole', on_delete=models.SET_NULL, null=True, blank=True, related_name='user_instances')
+    supportPrivileges = models.ManyToManyField('SupportPrivilege', related_name='user_instances', blank=True)
+    supportTeams = models.ManyToManyField('SupportTeam', related_name='users', blank=True)
+    supportGroups = models.ManyToManyField('SupportGroup', related_name='users', blank=True)
+
+    # For team leads and group admins
+    lead_of_teams = models.ManyToManyField('SupportTeam', related_name='leads', through='LeadSupportTeamThrough', blank=True)
+    admin_of_groups = models.ManyToManyField('SupportGroup', related_name='admins', through='AdminSupportGroupThrough', blank=True)
 
     class Meta:
         verbose_name = "User Instance"
@@ -93,3 +93,92 @@ class UserInstance(models.Model):
 
     def __str__(self):
         return f"{self.user.email} instance from {self.source}"
+
+
+class LeadSupportTeamThrough(models.Model):
+  userInstance = models.ForeignKey(UserInstance, on_delete=models.CASCADE)
+  supportTeam = models.ForeignKey('SupportTeam', on_delete=models.CASCADE)
+
+  class Meta:
+    db_table = "uv_lead_support_teams"
+    unique_together = ('userInstance', 'supportTeam')
+
+
+class AdminSupportGroupThrough(models.Model):
+  userInstance = models.ForeignKey(UserInstance, on_delete=models.CASCADE)
+  supportGroup = models.ForeignKey('SupportGroup', on_delete=models.CASCADE)
+
+  class Meta:
+    db_table = "uv_admin_support_groups"
+    unique_together = ('userInstance', 'supportGroup')
+
+
+class SupportRole(models.Model):
+  code = models.CharField(max_length=191, unique=True)
+  description = models.CharField(max_length=191, null=True, blank=True)
+
+  class Meta:
+    verbose_name = "Support Role"
+    verbose_name_plural = "Support Roles"
+    db_table = "uv_support_role"
+
+  def __str__(self):
+    return self.code
+
+
+class SupportGroup(models.Model):
+  name = models.CharField(max_length=191)
+  description = models.TextField()
+  createdAt = models.DateTimeField(auto_now_add=True)
+  isActive = models.BooleanField(default=False)
+  userView = models.BooleanField(default=False)
+  # users and admins are defined in UserInstance
+  supportTeams = models.ManyToManyField('SupportTeam', related_name='groups_with_team',
+                                        through='SupportGroupsTeamsThrough')
+
+  class Meta:
+    verbose_name = "Support Group"
+    verbose_name_plural = "Support Groups"
+    db_table = "uv_support_group"
+
+  def __str__(self):
+    return self.name
+
+
+class SupportGroupsTeamsThrough(models.Model):
+  supportGroup = models.ForeignKey(SupportGroup, on_delete=models.CASCADE)
+  supportTeam = models.ForeignKey('SupportTeam', on_delete=models.CASCADE)
+
+  class Meta:
+    db_table = "uv_support_groups_teams"
+    unique_together = ('supportGroup', 'supportTeam')
+
+
+class SupportTeam(models.Model):
+  name = models.CharField(max_length=191)
+  description = models.TextField()
+  createdAt = models.DateTimeField(auto_now_add=True)
+  isActive = models.BooleanField(default=False)
+
+  class Meta:
+    verbose_name = "Support Team"
+    verbose_name_plural = "Support Teams"
+    db_table = "uv_support_team"
+
+  def __str__(self):
+    return self.name
+
+
+class SupportPrivilege(models.Model):
+  name = models.CharField(max_length=191)
+  description = models.TextField()
+  privileges = models.JSONField(null=True, blank=True)
+  createdAt = models.DateTimeField(null=True, blank=True)
+
+  class Meta:
+    verbose_name = "Support Privilege"
+    verbose_name_plural = "Support Privileges"
+    db_table = "uv_support_privilege"
+
+  def __str__(self):
+    return self.name

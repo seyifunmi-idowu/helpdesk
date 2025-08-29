@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1>Create Group</h1>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+              <li class="breadcrumb-item"><a href="{% url 'group_list' %}">Groups</a></li>
+              <li class="breadcrumb-item active">Create</li>
+            </ol>
+          </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Group Details</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="name">Name</label>
+                                <input type="text" id="name" name="name" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="description">Description</label>
+                                <textarea id="description" name="description" class="form-control" rows="3"></textarea>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
+                                <label class="form-check-label" for="is_active">Group is Active</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">Assign Users and Teams</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Users</label>
+                                <select multiple class="form-control" name="users">
+                                    {% for user_instance in users %}
+                                        <option value="{{ user_instance.id }}">{{ user_instance.user.get_full_name }} ({{ user_instance.user.email }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Teams</label>
+                                <select multiple class="form-control" name="teams">
+                                    {% for team in teams %}
+                                        <option value="{{ team.id }}">{{ team.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <a href="{% url 'group_list' %}" class="btn btn-secondary">Cancel</a>
+                    <input type="submit" value="Create Group" class="btn btn-success float-right">
+                </div>
+            </div>
+        </form>
+      </div><!-- /.container-fluid -->
+    </section>
+    <!-- /.content -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function () {
+    //Initialize Select2 Elements
+    $('.select2').select2()
+});
+</script>
+{% endblock %}
