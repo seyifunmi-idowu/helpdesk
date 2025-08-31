@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>{{ view }}</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                        <li class="breadcrumb-item active">{{ view }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Prepared Response Details</h3>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="form-group">
+                            <label for="id_name">Name</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_description">Description</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_type">Type</label>
+                            {{ form.type }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_actions">Actions</label>
+                            <div id="actions-container">
+                                {# Action rows will be added here by JavaScript #}
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="add-action-btn">Add More actions</button>
+                            <input type="hidden" name="actions_json_data" id="actions-json-data">
+                        </div>
+                        <div class="form-group">
+                            <label>Groups</label>
+                            {{ form.groups }}
+                        </div>
+                        <div class="form-group">
+                            <label>Teams</label>
+                            {{ form.teams }}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">Save Prepared Response</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{{ prepared_response_actions|json_script:"prepared_response_actions_data" }}
+{{ current_actions_json|json_script:"initial_actions_json_data" }}
+<script>
+    const preparedResponseActions = JSON.parse(document.getElementById('prepared_response_actions_data').textContent);
+    const initialActionsJson = JSON.parse(document.getElementById('initial_actions_json_data').textContent);
+
+    const actionValueConfigs = {
+        "uvdesk.agent.add_note": { type: 'textarea' },
+        "uvdesk.ticket.mail_agent": { type: 'select', endpoint: '/member/api/email-templates/', sub_select_endpoint: '/member/api/agents/' },
+        "uvdesk.ticket.mail_customer": { type: 'select', endpoint: '/member/api/email-templates/' },
+        "uvdesk.ticket.mail_group": { type: 'select', endpoint: '/member/api/email-templates/', sub_select_endpoint: '/member/api/groups/' },
+        "uvdesk.ticket.mail_last_collaborator": { type: 'select', endpoint: '/member/api/email-templates/' },
+        "uvdesk.ticket.mail_team": { type: 'select', endpoint: '/member/api/email-templates/', sub_select_endpoint: '/member/api/teams/' },
+        "uvdesk.ticket.assign_agent": { type: 'select', endpoint: '/member/api/agents/' },
+        "uvdesk.ticket.assign_group": { type: 'select', endpoint: '/member/api/groups/' },
+        "uvdesk.ticket.update_priority": { type: 'select', endpoint: '/member/api/priorities/' },
+        "uvdesk.ticket.update_status": { type: 'select', endpoint: '/member/api/statuses/' },
+        "uvdesk.ticket.update_tag": { type: 'select', endpoint: '/member/api/tags/' },
+        "uvdesk.ticket.assign_team": { type: 'select', endpoint: '/member/api/teams/' },
+        "uvdesk.ticket.update_type": { type: 'select', endpoint: '/member/api/ticket-types/' },
+    };
+
+    function addActionRow(actionData = null) {
+        const container = $('#actions-container');
+        const actionIndex = container.children('.action-row').length;
+
+        const row = $('<div class="action-row form-row mb-2"></div>');
+        row.append(`
+            <div class="col-md-5">
+                <select class="form-control action-select" name="action_type_${actionIndex}">
+                    <option value="">Select an action</option>
+                    ${preparedResponseActions.map(action => `<option value="${action[0]}">${action[1]}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-md-5 action-value-container">
+                {# Dynamic input for action value #}
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger btn-sm remove-action-btn">Remove</button>
+            </div>
+        `);
+        container.append(row);
+
+        const actionSelect = row.find('.action-select');
+        const actionValueContainer = row.find('.action-value-container');
+
+        actionSelect.on('change', function() {
+            const selectedAction = $(this).val();
+            const config = actionValueConfigs[selectedAction];
+            actionValueContainer.empty();
+
+            if (config) {
+                if (config.type === 'textarea') {
+                    actionValueContainer.append(`<textarea class="form-control action-value" placeholder="Action Value"></textarea>`);
+                    if (actionData && actionData.value) {
+                        actionValueContainer.find('.action-value').val(actionData.value);
+                    }
+                } else if (config.type === 'select') {
+                    const select = $(`<select class="form-control action-value"></select>`);
+                    actionValueContainer.append(select);
+
+                    if (config.endpoint) {
+                        $.get(config.endpoint, function(data) {
+                            data.forEach(item => {
+                                select.append(`<option value="${item.id || item}">${item.name || item}</option>`);
+                            });
+
+                            if (config.sub_select_endpoint) {
+                                const subSelect = $(`<select class="form-control action-value-sub mt-2"></select>`);
+                                actionValueContainer.append(subSelect);
+
+                                $.get(config.sub_select_endpoint, function(sub_data) {
+                                    sub_data.forEach(sub_item => {
+                                        subSelect.append(`<option value="${sub_item.id}">${sub_item.name}</option>`);
+                                    });
+                                    if (actionData && typeof actionData.value === 'object') {
+                                        select.val(actionData.value.template);
+                                        subSelect.val(actionData.value.recipient);
+                                    }
+                                });
+                            } else {
+                                if (actionData && actionData.value) {
+                                    select.val(actionData.value);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        });
+
+        if (actionData && actionData.type) {
+            actionSelect.val(actionData.type).trigger('change');
+        }
+
+        row.find('.remove-action-btn').on('click', function() {
+            row.remove();
+        });
+    }
+
+    // Populate initial actions on page load
+    if (initialActionsJson && initialActionsJson.length > 0) {
+        initialActionsJson.forEach(action => addActionRow(action));
+    } else {
+        addActionRow(); // Add one empty row by default
+    }
+
+    $('#add-action-btn').on('click', function() {
+        addActionRow();
+    });
+
+    // Serialize actions to JSON before form submission
+    $('form').on('submit', function() {
+        const actions = [];
+        $('.action-row').each(function() {
+            const type = $(this).find('.action-select').val();
+            const value = $(this).find('.action-value').val();
+            const sub_value = $(this).find('.action-value-sub').val();
+
+            if (type) {
+                let action_value = value;
+                if (sub_value) {
+                    action_value = {
+                        "template": value,
+                        "recipient": sub_value
+                    }
+                }
+                actions.push({ type: type, value: action_value });
+            }
+        });
+        $('#actions-json-data').val(JSON.stringify(actions));
+    });
+</script>
+{% endblock %}

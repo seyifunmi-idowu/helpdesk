@@ -1,5 +1,5 @@
 from django.db import models
-# from core.models import User, SupportGroup, SupportTeam # Moved to string references
+
 
 class Ticket(models.Model):
     source = models.CharField(max_length=191)
@@ -25,13 +25,13 @@ class Ticket(models.Model):
     status = models.ForeignKey('TicketStatus', on_delete=models.SET_NULL, null=True, blank=True)
     priority = models.ForeignKey('TicketPriority', on_delete=models.SET_NULL, null=True, blank=True)
     type = models.ForeignKey('TicketType', on_delete=models.SET_NULL, null=True, blank=True)
-    customer = models.ForeignKey('core.User', on_delete=models.CASCADE, related_name='tickets_as_customer')
-    agent = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets_as_agent')
-    supportGroup = models.ForeignKey('core.SupportGroup', on_delete=models.SET_NULL, null=True, blank=True)
-    supportTeam = models.ForeignKey('core.SupportTeam', on_delete=models.SET_NULL, null=True, blank=True)
+    customer = models.ForeignKey('authentication.User', on_delete=models.CASCADE, related_name='tickets_as_customer')
+    agent = models.ForeignKey('authentication.User', on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets_as_agent')
+    supportGroup = models.ForeignKey('authentication.SupportGroup', on_delete=models.SET_NULL, null=True, blank=True)
+    supportTeam = models.ForeignKey('authentication.SupportTeam', on_delete=models.SET_NULL, null=True, blank=True)
 
     # ManyToMany relationships with explicit through tables
-    collaborators = models.ManyToManyField('core.User', related_name='tickets_as_collaborator', through='TicketCollaboratorsThrough')
+    collaborators = models.ManyToManyField('authentication.User', related_name='tickets_as_collaborator', through='TicketCollaboratorsThrough')
     supportTags = models.ManyToManyField('Tag', related_name='tickets_with_tag', through='TicketTagsThrough')
     supportLabels = models.ManyToManyField('SupportLabel', related_name='tickets_with_label', through='TicketLabelsThrough')
 
@@ -43,9 +43,10 @@ class Ticket(models.Model):
     def __str__(self):
         return self.subject or f"Ticket #{self.id}"
 
+
 class TicketCollaboratorsThrough(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
-    user = models.ForeignKey('core.User', on_delete=models.CASCADE)
+    user = models.ForeignKey('authentication.User', on_delete=models.CASCADE)
 
     class Meta:
         db_table = "uv_tickets_collaborators"
@@ -69,7 +70,7 @@ class TicketLabelsThrough(models.Model):
 
 class Thread(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='threads')
-    user = models.ForeignKey('core.User', on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey('authentication.User', on_delete=models.SET_NULL, null=True, blank=True)
     source = models.CharField(max_length=191)
     messageId = models.TextField(null=True, blank=True)
     threadType = models.CharField(max_length=191)
@@ -125,7 +126,7 @@ class Tag(models.Model):
 class SupportLabel(models.Model):
     name = models.CharField(max_length=191)
     colorCode = models.CharField(max_length=191, null=True, blank=True)
-    user = models.ForeignKey('core.User', on_delete=models.CASCADE)
+    user = models.ForeignKey('authentication.User', on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Support Label"
@@ -180,7 +181,7 @@ class TicketRating(models.Model):
     feedback = models.TextField(null=True, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True)
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='ratings')
-    customer = models.ForeignKey('core.User', on_delete=models.CASCADE)
+    customer = models.ForeignKey('authentication.User', on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "Ticket Rating"
@@ -195,12 +196,12 @@ class SavedReplies(models.Model):
     subject = models.CharField(max_length=255, null=True, blank=True)
     message = models.TextField()
     templateId = models.IntegerField(null=True, blank=True)
-    user = models.ForeignKey('core.User', on_delete=models.CASCADE, null=True, blank=True) # Assuming User is the correct foreign key
+    user = models.ForeignKey('authentication.UserInstance', on_delete=models.CASCADE, null=True, blank=True) # Assuming UserInstance is the correct foreign key
     isPredefind = models.BooleanField(default=True, null=True, blank=True)
     messageInline = models.TextField(null=True, blank=True)
     templateFor = models.CharField(max_length=255, null=True, blank=True)
-    groups = models.ManyToManyField('core.SupportGroup', related_name='saved_replies_groups', through='SavedRepliesGroupsThrough')
-    teams = models.ManyToManyField('core.SupportTeam', related_name='saved_replies_teams', through='SavedRepliesTeamsThrough')
+    groups = models.ManyToManyField('authentication.SupportGroup', related_name='saved_replies_groups', through='SavedRepliesGroupsThrough')
+    teams = models.ManyToManyField('authentication.SupportTeam', related_name='saved_replies_teams', through='SavedRepliesTeamsThrough')
 
     class Meta:
         verbose_name = "Saved Reply"
@@ -212,7 +213,7 @@ class SavedReplies(models.Model):
 
 class SavedRepliesGroupsThrough(models.Model):
     savedReply = models.ForeignKey(SavedReplies, on_delete=models.CASCADE)
-    group = models.ForeignKey('core.SupportGroup', on_delete=models.CASCADE)
+    group = models.ForeignKey('authentication.SupportGroup', on_delete=models.CASCADE)
 
     class Meta:
         db_table = "uv_saved_replies_groups"
@@ -220,14 +221,14 @@ class SavedRepliesGroupsThrough(models.Model):
 
 class SavedRepliesTeamsThrough(models.Model):
     savedReply = models.ForeignKey(SavedReplies, on_delete=models.CASCADE)
-    team = models.ForeignKey('core.SupportTeam', on_delete=models.CASCADE)
+    team = models.ForeignKey('authentication.SupportTeam', on_delete=models.CASCADE)
 
     class Meta:
         db_table = "uv_saved_replies_teams"
         unique_together = ('savedReply', 'team')
 
 class AgentActivity(models.Model):
-    agent = models.ForeignKey('core.User', on_delete=models.CASCADE)
+    agent = models.ForeignKey('authentication.User', on_delete=models.CASCADE)
     ticket = models.ForeignKey('Ticket', on_delete=models.CASCADE)
     agentName = models.CharField(max_length=255, null=True, blank=True)
     customerName = models.CharField(max_length=255, null=True, blank=True)
@@ -241,3 +242,64 @@ class AgentActivity(models.Model):
 
     def __str__(self):
         return f"{self.agent.email} - {self.action} at {self.createdAt}"
+
+class PreparedResponse(models.Model):
+    name = models.CharField(max_length=191)
+    description = models.TextField(null=True, blank=True)
+    type = models.CharField(max_length=191) # 'public' or 'private'
+    actions = models.JSONField(null=True, blank=True) # Stores serialized array of actions
+    user = models.ForeignKey('authentication.UserInstance', on_delete=models.SET_NULL, null=True, blank=True) # Links to uv_user_instance(id)
+    groups = models.ManyToManyField('authentication.SupportGroup', related_name='prepared_responses_groups', through='PreparedResponseSupportGroupsThrough')
+    teams = models.ManyToManyField('authentication.SupportTeam', related_name='prepared_responses_teams', through='PreparedResponseSupportTeamsThrough')
+
+    class Meta:
+        verbose_name = "Prepared Response"
+        verbose_name_plural = "Prepared Responses"
+        db_table = "uv_prepared_responses"
+
+    def __str__(self):
+        return self.name
+
+class PreparedResponseSupportGroupsThrough(models.Model):
+    preparedResponse = models.ForeignKey(PreparedResponse, on_delete=models.CASCADE)
+    group = models.ForeignKey('authentication.SupportGroup', on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "uv_prepared_response_support_groups"
+        unique_together = ('preparedResponse', 'group')
+
+class PreparedResponseSupportTeamsThrough(models.Model):
+    preparedResponse = models.ForeignKey(PreparedResponse, on_delete=models.CASCADE)
+    team = models.ForeignKey('authentication.SupportTeam', on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "uv_prepared_response_support_teams"
+        unique_together = ('preparedResponse', 'team')
+
+class Workflow(models.Model):
+    name = models.CharField(max_length=191)
+    description = models.TextField(null=True, blank=True)
+    conditions = models.JSONField(null=True, blank=True) # Stores serialized array of conditions
+    actions = models.JSONField(null=True, blank=True) # Stores serialized array of actions
+    status = models.BooleanField(default=True) # Whether the rule is active or not
+    is_predefind = models.BooleanField(default=False) # System-defined vs custom rule flag
+
+    class Meta:
+        verbose_name = "Workflow"
+        verbose_name_plural = "Workflows"
+        db_table = "uv_workflow"
+
+    def __str__(self):
+        return self.name
+
+class WorkflowEvent(models.Model):
+    workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name='events')
+    event = models.CharField(max_length=191) # Stores the trigger name as a string (e.g., 'ticket.created')
+
+    class Meta:
+        verbose_name = "Workflow Event"
+        verbose_name_plural = "Workflow Events"
+        db_table = "uv_workflow_events"
+
+    def __str__(self):
+        return f"{self.workflow.name} - {self.event}"

@@ -64,11 +64,11 @@
                         </div>
                         <div class="card-body p-0">
                             <ul class="list-group list-group-flush">
-                                <li class="list-group-item"><a href="#"><i class="fas fa-reply fa-fw mr-2"></i> Prepared Responses</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-save fa-fw mr-2"></i> Saved Replies</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-tags fa-fw mr-2"></i> Tags</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-ticket-alt fa-fw mr-2"></i> Ticket Types</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-project-diagram fa-fw mr-2"></i> Workflows</a></li>
+                                <li class="list-group-item"><a href="{% url 'prepared_response_list' %}"><i class="fas fa-reply fa-fw mr-2"></i> Prepared Responses</a></li>
+                                <li class="list-group-item"><a href="{% url 'saved_reply_list' %}"><i class="fas fa-save fa-fw mr-2"></i> Saved Replies</a></li>
+                                <li class="list-group-item"><a href="{% url 'tag_list' %}"><i class="fas fa-tags fa-fw mr-2"></i> Tags</a></li>
+                                <li class="list-group-item"><a href="{% url 'ticket_type_list' %}"><i class="fas fa-ticket-alt fa-fw mr-2"></i> Ticket Types</a></li>
+                                <li class="list-group-item"><a href="{% url 'workflow_list' %}"><i class="fas fa-project-diagram fa-fw mr-2"></i> Workflows</a></li>
                             </ul>
                         </div>
                     </div>

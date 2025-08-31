@@ -179,11 +179,11 @@
               </p>
             </a>
             <ul class="nav nav-treeview">
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Prepared Responses</p></a></li>
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Saved Replies</p></a></li>
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Tags</p></a></li>
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Ticket Types</p></a></li>
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Workflows</p></a></li>
+              <li class="nav-item"><a href="{% url 'prepared_response_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Prepared Responses</p></a></li>
+              <li class="nav-item"><a href="{% url 'saved_reply_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Saved Replies</p></a></li>
+              <li class="nav-item"><a href="{% url 'tag_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Tags</p></a></li>
+              <li class="nav-item"><a href="{% url 'ticket_type_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Ticket Types</p></a></li>
+              <li class="nav-item"><a href="{% url 'workflow_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Workflows</p></a></li>
             </ul>
           </li>
 
@@ -275,5 +275,8 @@
 <script src="{% static 'dist/js/adminlte.js' %}"></script>
 <!-- AdminLTE dashboard demo (This is only for demo purposes) -->
 <script src="{% static 'dist/js/pages/dashboard.js' %}"></script>
+
+{% block extra_js %}{% endblock %}
+
 </body>
 </html>
