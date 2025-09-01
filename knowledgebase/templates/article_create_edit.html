@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>{{ view }}</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'article_list' %}">Articles</a></li>
+                        <li class="breadcrumb-item active">{{ view }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="card card-primary card-outline card-outline-tabs">
+                <div class="card-header p-0 border-bottom-0">
+                    <ul class="nav nav-tabs" id="custom-tabs-four-tab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="article-tab" data-toggle="pill" href="#article-content" role="tab" aria-controls="article-content" aria-selected="true">Article</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="seo-tab" data-toggle="pill" href="#seo-content" role="tab" aria-controls="seo-content" aria-selected="false">SEO</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="revisions-tab" data-toggle="pill" href="#revisions-content" role="tab" aria-controls="revisions-content" aria-selected="false">Revisions</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="related-articles-tab" data-toggle="pill" href="#related-articles-content" role="tab" aria-controls="related-articles-content" aria-selected="false">Related Articles</a>
+                        </li>
+                    </ul>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="tab-content" id="custom-tabs-four-tabContent">
+                            <div class="tab-pane fade show active" id="article-content" role="tabpanel" aria-labelledby="article-tab">
+                                <div class="form-group">
+                                    <label for="id_name">Title</label>
+                                    {{ form.name }}
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_content">Content</label>
+                                    {{ form.content }}
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_categories">Categories</label>
+                                    {{ form.categories }}
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_status">Status</label>
+                                    {{ form.status }}
+                                </div>
+                                <div class="form-group form-check">
+                                    {{ form.stared }} <label class="form-check-label" for="id_stared">Mark as Starred</label>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_tags">Tags</label>
+                                    {{ form.tags }}
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="seo-content" role="tabpanel" aria-labelledby="seo-tab">
+                                <div class="form-group">
+                                    <label for="id_slug">Slug</label>
+                                    {{ form.slug }}
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_meta_title">Meta Title</label>
+                                    {{ form.meta_title }}
+                                    <small class="form-text text-muted">Title tags and meta descriptions are bits of HTML code in the header of a web page. They help search engines understand the content on a page. A page's title tag and meta description are usually shown whenever that page appears in search engine results.</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_keywords">Meta Keywords</label>
+                                    {{ form.keywords }}
+                                    <small class="form-text text-muted">comma separated (,)</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_meta_description">Meta Description</label>
+                                    {{ form.meta_description }}
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="revisions-content" role="tabpanel" aria-labelledby="revisions-tab">
+                                <p>Revisions will be displayed here.</p>
+                            </div>
+                            <div class="tab-pane fade" id="related-articles-content" role="tabpanel" aria-labelledby="related-articles-tab">
+                                <div class="form-group">
+                                    <label for="related-article-search">Article Title</label>
+                                    <input type="text" id="related-article-search" class="form-control" placeholder="Start typing few characters and add set of relevant article from the list">
+                                    <div id="related-article-search-results" class="list-group mt-2"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Selected Related Articles</label>
+                                    <div id="selected-related-articles" class="mt-2"></div>
+                                    <input type="hidden" name="related_articles_ids" id="related-articles-ids">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">Save/Update</button>
+                        <button type="button" class="btn btn-secondary ml-2">Preview</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+
+{% block extra_js %}
+<script>
+    $(function () {
+        // Summernote
+        $('.summernote').summernote({
+            height: 300,
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                ['fontname', ['fontname']],
+                ['color', ['color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['height', ['height']],
+                ['table', ['table']],
+                ['insert', ['link']],
+                ['view', ['fullscreen', 'codeview', 'help']]
+            ]
+        });
+
+        // Related Articles Search
+        const relatedArticleSearchInput = $('#related-article-search');
+        const relatedArticleSearchResults = $('#related-article-search-results');
+        const selectedRelatedArticlesContainer = $('#selected-related-articles');
+        // const relatedArticlesIdsInput = $('#related-articles-ids'); // No longer needed
+
+        let selectedArticleIds = new Set();
+        const currentArticleId = {{ article.pk|default:0 }};
+        
+
+        let addRelatedArticleUrl = '';
+        let removeRelatedArticleUrl = '';
+        let getRelatedArticlesUrl = '';
+
+        {% if article.pk %}
+            addRelatedArticleUrl = '{% url "add_related_article_api" article.pk %}';
+            removeRelatedArticleUrl = '{% url "remove_related_article_api" article.pk %}';
+            getRelatedArticlesUrl = '{% url "get_related_articles_api" article.pk %}';
+        {% endif %}
+
+        
+
+        // Function to add a selected article to the list and send to backend
+        function addSelectedArticle(articleId, articleName, skipApiCall = false) {
+            if (!selectedArticleIds.has(articleId)) {
+                if (!skipApiCall && currentArticleId !== 0) { // Only call API if editing an existing article
+                    $.ajax({
+                        url: addRelatedArticleUrl,
+                        type: 'POST',
+                        data: JSON.stringify({ related_article_id: articleId }),
+                        contentType: 'application/json',
+                        headers: { 'X-CSRFToken': $('[name="csrfmiddlewaretoken"]').val() },
+                        success: function(response) {
+                            selectedArticleIds.add(articleId);
+                            const articleHtml = `
+                                <div class="d-flex justify-content-between align-items-center p-2 border-bottom" data-id="${articleId}">
+                                    <span>${articleName}</span>
+                                    <button type="button" class="btn btn-sm btn-danger remove-related-article">&times;</button>
+                                </div>
+                            `;
+                            selectedRelatedArticlesContainer.append(articleHtml);
+                        },
+                        error: function(xhr, status, error) {
+                            console.error("Error adding related article:", error);
+                            alert("Failed to add related article. Please try again.");
+                        }
+                    });
+                } else { // For initial load or new article creation (where currentArticleId is 0)
+                    selectedArticleIds.add(articleId);
+                    const articleHtml = `
+                        <div class="d-flex justify-content-between align-items-center p-2 border-bottom" data-id="${articleId}">
+                            <span>${articleName}</span>
+                            <button type="button" class="btn btn-sm btn-danger remove-related-article">&times;</button>
+                        </div>
+                    `;
+                    selectedRelatedArticlesContainer.append(articleHtml);
+                }
+            }
+        }
+
+        // Function to remove a selected article from the list and send to backend
+        selectedRelatedArticlesContainer.on('click', '.remove-related-article', function() {
+            const articleDiv = $(this).closest('div');
+            const articleId = parseInt(articleDiv.data('id'));
+
+            if (currentArticleId !== 0) { // Only call API if editing an existing article
+                $.ajax({
+                    url: removeRelatedArticleUrl,
+                    type: 'POST', // Using POST for DELETE action as per Django's CSRF
+                    data: JSON.stringify({ related_article_id: articleId }),
+                    contentType: 'application/json',
+                    headers: { 'X-CSRFToken': $('[name="csrfmiddlewaretoken"]').val() },
+                    success: function(response) {
+                        selectedArticleIds.delete(articleId);
+                        articleDiv.remove();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error removing related article:", error);
+                        alert("Failed to remove related article. Please try again.");
+                    }
+                });
+            } else { // For new article creation (where currentArticleId is 0)
+                selectedArticleIds.delete(articleId);
+                articleDiv.remove();
+            }
+        });
+
+        // Search input keyup event with debounce
+        let searchTimeout;
+        relatedArticleSearchInput.on('keyup', function() {
+            clearTimeout(searchTimeout);
+            const query = $(this).val();
+            if (query.length < 3) {
+                relatedArticleSearchResults.empty();
+                return;
+            }
+            searchTimeout = setTimeout(() => {
+                $.ajax({
+                    url: '{% url "article_search_api" %}',
+                    data: { q: query },
+                    dataType: 'json',
+                    success: function(data) {
+                        relatedArticleSearchResults.empty();
+                        data.forEach(article => {
+                            // Only show articles that are not already selected and not the current article being edited
+                            if (!selectedArticleIds.has(article.id) && article.id !== currentArticleId) {
+                                const resultItem = `
+                                    <a href="#" class="list-group-item list-group-item-action" data-id="${article.id}" data-name="${article.name}">
+                                        ${article.name}
+                                    </a>
+                                `;
+                                relatedArticleSearchResults.append(resultItem);
+                            }
+                        });
+                    }
+                });
+            }, 300); // Debounce time
+        });
+
+        // Click handler for search results
+        relatedArticleSearchResults.on('click', '.list-group-item-action', function(e) {
+            e.preventDefault();
+            const articleId = parseInt($(this).data('id'));
+            const articleName = $(this).data('name');
+            addSelectedArticle(articleId, articleName);
+            relatedArticleSearchInput.val(''); // Clear search input
+            relatedArticleSearchResults.empty(); // Clear search results
+        });
+
+        // Populate initial related articles if editing
+        {% if article.pk %}
+            $.ajax({
+                url: getRelatedArticlesUrl,
+                type: 'GET',
+                success: function(data) {
+                    data.forEach(article => {
+                        addSelectedArticle(article.id, article.name, true); // true to skip API call for initial load
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error fetching initial related articles:", error);
+                }
+            });
+        {% endif %}
+    });
+</script>
+{% endblock %}
+{% endblock %}

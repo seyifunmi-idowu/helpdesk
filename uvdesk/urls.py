@@ -23,6 +23,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("member/", include("authentication.urls")),
     path("member/", include("ticket.urls")),
+    path("member/knowledgebase/", include("knowledgebase.urls")),
     # path("member/", include("core.urls")),
 ]
 

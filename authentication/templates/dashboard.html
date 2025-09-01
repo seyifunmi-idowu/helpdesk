@@ -32,11 +32,11 @@
                         </div>
                         <div class="card-body p-0">
                             <ul class="list-group list-group-flush">
-                                <li class="list-group-item"><a href="#"><i class="fas fa-newspaper fa-fw mr-2"></i> Articles</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-sitemap fa-fw mr-2"></i> Categories</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-folder fa-fw mr-2"></i> Folders</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-bullhorn fa-fw mr-2"></i> Marketing Announcement</a></li>
-                                <li class="list-group-item"><a href="#"><i class="fas fa-cubes fa-fw mr-2"></i> Marketing Modules</a></li>
+                                <li class="list-group-item"><a href="{% url 'article_list' %}"><i class="fas fa-newspaper fa-fw mr-2"></i> Articles</a></li>
+                                <li class="list-group-item"><a href="{% url 'announcement_list' %}"><i class="fas fa-sitemap fa-fw mr-2"></i> Categories</a></li>
+                                <li class="list-group-item"><a href="{% url 'folder_list' %}"><i class="fas fa-folder fa-fw mr-2"></i> Folders</a></li>
+                                <li class="list-group-item"><a href="{% url 'category_list' %}"><i class="fas fa-bullhorn fa-fw mr-2"></i> Marketing Announcement</a></li>
+                                <li class="list-group-item"><a href="{% url 'marketing_module_list' %}"><i class="fas fa-cubes fa-fw mr-2"></i> Marketing Modules</a></li>
                             </ul>
                         </div>
                     </div>

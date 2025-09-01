@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>{{ view }}</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'folder_list' %}">Folders</a></li>
+                        <li class="breadcrumb-item active">{{ view }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Folder Details</h3>
+                </div>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="form-group">
+                            <label for="id_name">Name</label>
+                            {{ form.name }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_description">Description</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_visibility">Status</label>
+                            {{ form.visibility }}
+                        </div>
+                        <div class="form-group">
+                            <label for="id_solution_image">Folder Image</label>
+                            {{ form.solution_image }}
+                            <small class="form-text text-muted">Help users identify the proper folder with a recognizable image.</small>
+                            {% if form.instance.pk and form.instance.solution_image %}
+                                <div class="mt-2">
+                                    <p>Current Image:</p>
+                                    <img src="{{ form.instance.solution_image.url }}" alt="Current Image" style="max-width: 200px; height: auto;">
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">Save Folder</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

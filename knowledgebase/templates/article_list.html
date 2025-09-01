@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1>Articles</h1>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+              <li class="breadcrumb-item active">Articles</li>
+            </ol>
+          </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">All Articles</h3>
+                <div class="card-tools">
+                    <a href="{% url 'article_create' %}" class="btn btn-primary btn-sm">Create New Article</a>
+                </div>
+              </div>
+              <!-- /.card-header -->
+              <div class="card-body">
+                <form method="GET" action="" class="form-inline mb-3">
+                    <div class="input-group input-group-sm" style="width: 250px;">
+                        <input type="text" name="search" class="form-control float-right" placeholder="Search" value="{{ search_query|default_if_none:'' }}">
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-default"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group ml-3">
+                        <label for="status_filter" class="mr-2">Status:</label>
+                        <select name="status" id="status_filter" class="form-control form-control-sm" onchange="this.form.submit()">
+                            <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+                            {% for status_code, status_display in STATUS_CHOICES %}
+                                <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>{{ status_display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group ml-3">
+                        <label for="category_filter" class="mr-2">Category:</label>
+                        <select name="category" id="category_filter" class="form-control form-control-sm" onchange="this.form.submit()">
+                            <option value="" {% if not category_filter %}selected{% endif %}>All</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group ml-3">
+                        <label for="tag_filter" class="mr-2">Tag:</label>
+                        <select name="tag" id="tag_filter" class="form-control form-control-sm" onchange="this.form.submit()">
+                            <option value="" {% if not tag_filter %}selected{% endif %}>All</option>
+                            {% for tag in tags %}
+                                <option value="{{ tag.id }}" {% if tag_filter == tag.id|stringformat:"s" %}selected{% endif %}>{{ tag.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+                <table class="table table-hover text-nowrap">
+                  <thead>
+                    <tr>
+                      <th>
+                          <a href="?sort_by=name{% if sort_by == 'name' and order == 'asc' %}&order=desc{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if tag_filter %}&tag={{ tag_filter }}{% endif %}">Name
+                              {% if sort_by == 'name' %}
+                                  {% if order == 'asc' %}<i class="fas fa-sort-up"></i>{% else %}<i class="fas fa-sort-down"></i>{% endif %}
+                              {% else %}
+                                  <i class="fas fa-sort"></i>
+                              {% endif %}
+                          </a>
+                      </th>
+                      <th>Slug</th>
+                      <th>Status</th>
+                      <th>
+                          <a href="?sort_by=viewed{% if sort_by == 'viewed' and order == 'asc' %}&order=desc{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if tag_filter %}&tag={{ tag_filter }}{% endif %}">Views
+                              {% if sort_by == 'viewed' %}
+                                  {% if order == 'asc' %}<i class="fas fa-sort-up"></i>{% else %}<i class="fas fa-sort-down"></i>{% endif %}
+                              {% else %}
+                                  <i class="fas fa-sort"></i>
+                              {% endif %}
+                          </a>
+                      </th>
+                      <th>
+                          <a href="?sort_by=date_added{% if sort_by == 'date_added' and order == 'asc' %}&order=desc{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if tag_filter %}&tag={{ tag_filter }}{% endif %}">Date Added
+                              {% if sort_by == 'date_added' %}
+                                  {% if order == 'asc' %}<i class="fas fa-sort-up"></i>{% else %}<i class="fas fa-sort-down"></i>{% endif %}
+                              {% else %}
+                                  <i class="fas fa-sort"></i>
+                              {% endif %}
+                          </a>
+                      </th>
+                      <th>
+                          <a href="?sort_by=date_updated{% if sort_by == 'date_updated' and order == 'asc' %}&order=desc{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}{% if tag_filter %}&tag={{ tag_filter }}{% endif %}">Last Updated
+                              {% if sort_by == 'date_updated' %}
+                                  {% if order == 'asc' %}<i class="fas fa-sort-up"></i>{% else %}<i class="fas fa-sort-down"></i>{% endif %}
+                              {% else %}
+                                  <i class="fas fa-sort"></i>
+                              {% endif %}
+                          </a>
+                      </th>
+                      <th style="width: 20%"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for article in articles %}
+                    <tr>
+                      <td>{{ article.name }}</td>
+                      <td>{{ article.slug }}</td>
+                      <td>{{ article.get_status_display }}</td>
+                      <td>{{ article.viewed }}</td>
+                      <td>{{ article.date_added|date:"Y-m-d H:i" }}</td>
+                      <td>{{ article.date_updated|date:"Y-m-d H:i" }}</td>
+                      <td class="project-actions text-right">
+                          <a class="btn btn-info btn-sm" href="{% url 'article_edit' article.pk %}">
+                              <i class="fas fa-pencil-alt">
+                              </i>
+                              Edit
+                          </a>
+                          <button type="button" class="btn btn-danger btn-sm delete-btn" data-url="{% url 'article_delete' article.pk %}">
+                              <i class="fas fa-trash">
+                              </i>
+                              Delete
+                          </button>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No articles found.</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <!-- /.card-body -->
+            </div>
+            <!-- /.card -->
+          </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+    <!-- /.content -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle delete button click
+    $('.delete-btn').on('click', function(e) {
+        e.preventDefault();
+        var deleteUrl = $(this).data('url');
+        $('#confirmActionForm').attr('action', deleteUrl);
+        $('#confirmActionModal').modal('show');
+    });
+});
+</script>
+{% endblock %}

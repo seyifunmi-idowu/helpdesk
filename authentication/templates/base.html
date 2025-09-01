@@ -145,11 +145,11 @@
               </p>
             </a>
             <ul class="nav nav-treeview">
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Articles</p></a></li>
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Categories</p></a></li>
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Folders</p></a></li>
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Marketing Announcement</p></a></li>
-              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Marketing Modules</p></a></li>
+              <li class="nav-item"><a href="{% url 'article_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Articles</p></a></li>
+              <li class="nav-item"><a href="{% url 'category_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Categories</p></a></li>
+              <li class="nav-item"><a href="{% url 'folder_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Folders</p></a></li>
+              <li class="nav-item"><a href="{% url 'announcement_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Marketing Announcement</p></a></li>
+              <li class="nav-item"><a href="{% url 'marketing_module_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Marketing Modules</p></a></li>
             </ul>
           </li>
 
@@ -275,6 +275,30 @@
 <script src="{% static 'dist/js/adminlte.js' %}"></script>
 <!-- AdminLTE dashboard demo (This is only for demo purposes) -->
 <script src="{% static 'dist/js/pages/dashboard.js' %}"></script>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" role="dialog" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmActionModalLabel">Confirm Action</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to perform this action?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <form id="confirmActionForm" method="POST" action="">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Confirm</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% block extra_js %}{% endblock %}
 
