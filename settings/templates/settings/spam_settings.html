@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Spam Settings{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>Spam Settings</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                        <li class="breadcrumb-item active">Spam Settings</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Spam Settings</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="id_black_list">Black List</label>
+                            <textarea class="form-control" id="id_black_list" name="black_list" rows="5">{{ black_list_display }}</textarea>
+                            <small class="form-text text-muted">Comma separated values (Eg. support@example.com, @example.com, 68.98.31.226)</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="id_white_list">White List</label>
+                            <textarea class="form-control" id="id_white_list" name="white_list" rows="5">{{ white_list_display }}</textarea>
+                            <small class="form-text text-muted">Comma separated values (Eg. support@example.com, @example.com, 68.98.31.226)</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Save Settings</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
