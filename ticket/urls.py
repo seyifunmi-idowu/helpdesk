@@ -2,6 +2,14 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('tickets/', views.ticket_list, name='ticket_list'),
+    path('tickets/<int:ticket_id>/update_status/', views.update_ticket_status, name='update_ticket_status'),
+    path('tickets/<int:ticket_id>/update_priority/', views.update_ticket_priority, name='update_ticket_priority'),
+    path('tickets/<int:ticket_id>/update_agent/', views.update_ticket_agent, name='update_ticket_agent'),
+    path('tickets/<int:ticket_id>/update_type/', views.update_ticket_type, name='update_ticket_type'),
+    path('tickets/<int:ticket_id>/update_group/', views.update_ticket_group, name='update_ticket_group'),
+    path('tickets/<int:ticket_id>/update_team/', views.update_ticket_team, name='update_ticket_team'),
+    path('tickets/<int:ticket_id>/', views.ticket_view, name='ticket_view'),
     path('workflows/', views.workflow_list, name='workflow_list'),
     path('workflows/create/', views.workflow_create, name='workflow_create'),
     path('workflows/<int:workflow_id>/edit/', views.workflow_edit, name='workflow_edit'),
@@ -32,6 +40,7 @@ urlpatterns = [
     path('prepared-responses/<int:prepared_response_id>/delete/', views.prepared_response_delete, name='prepared_response_delete'),
 
     # API endpoints
+    path('api/tickets/', views.get_filtered_tickets_and_counts, name='get_filtered_tickets_and_counts'),
     path('api/agents/', views.get_agents, name='get_agents'),
     path('api/groups/', views.get_groups, name='get_groups'),
     path('api/teams/', views.get_teams, name='get_teams'),

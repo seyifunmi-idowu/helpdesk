@@ -8,9 +8,10 @@ from .forms import AnnouncementForm, MarketingModuleForm, FolderForm, CategoryFo
 from authentication.models import SupportGroup
 from ticket.models import Tag
 import json
+from authentication.decorators import admin_login_required
 
 # Announcement Views
-@login_required
+@admin_login_required
 def announcement_list(request):
     announcements = Announcement.objects.all()
 
@@ -37,7 +38,7 @@ def announcement_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     announcements = announcements.order_by(sort_by)
 
     # Get all support groups for the filter dropdown
@@ -56,7 +57,7 @@ def announcement_list(request):
     }
     return render(request, "announcement_list.html", context)
 
-@login_required
+@admin_login_required
 def announcement_create_edit(request, pk=None):
     if pk:
         announcement = get_object_or_404(Announcement, pk=pk)
@@ -72,7 +73,7 @@ def announcement_create_edit(request, pk=None):
             form = AnnouncementForm(request.POST, instance=announcement)
         else:
             form = AnnouncementForm(request.POST)
-        
+
         if form.is_valid():
             form.save()
             return redirect('announcement_list')
@@ -84,7 +85,7 @@ def announcement_create_edit(request, pk=None):
     }
     return render(request, 'announcement_create_edit.html', context)
 
-@login_required
+@admin_login_required
 @require_POST
 def announcement_delete(request, pk):
     announcement = get_object_or_404(Announcement, pk=pk)
@@ -92,7 +93,7 @@ def announcement_delete(request, pk):
     return redirect('announcement_list')
 
 # Marketing Module Views
-@login_required
+@admin_login_required
 def marketing_module_list(request):
     marketing_modules = MarketingModule.objects.all()
 
@@ -119,7 +120,7 @@ def marketing_module_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     marketing_modules = marketing_modules.order_by(sort_by)
 
     # Get all support groups for the filter dropdown
@@ -138,7 +139,7 @@ def marketing_module_list(request):
     }
     return render(request, "marketing_module_list.html", context)
 
-@login_required
+@admin_login_required
 def marketing_module_create_edit(request, pk=None):
     if pk:
         module = get_object_or_404(MarketingModule, pk=pk)
@@ -161,7 +162,7 @@ def marketing_module_create_edit(request, pk=None):
     }
     return render(request, 'marketing_module_create_edit.html', context)
 
-@login_required
+@admin_login_required
 @require_POST
 def marketing_module_delete(request, pk):
     module = get_object_or_404(MarketingModule, pk=pk)
@@ -169,7 +170,7 @@ def marketing_module_delete(request, pk):
     return redirect('marketing_module_list')
 
 # Folder Views
-@login_required
+@admin_login_required
 def folder_list(request):
     folders = Folder.objects.all()
 
@@ -189,7 +190,7 @@ def folder_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     folders = folders.order_by(sort_by)
 
     context = {
@@ -203,7 +204,7 @@ def folder_list(request):
     }
     return render(request, "folder_list.html", context)
 
-@login_required
+@admin_login_required
 def folder_create_edit(request, pk=None):
     if pk:
         folder = get_object_or_404(Folder, pk=pk)
@@ -226,7 +227,7 @@ def folder_create_edit(request, pk=None):
     }
     return render(request, 'folder_create_edit.html', context)
 
-@login_required
+@admin_login_required
 @require_POST
 def folder_delete(request, pk):
     folder = get_object_or_404(Folder, pk=pk)
@@ -234,7 +235,7 @@ def folder_delete(request, pk):
     return redirect('folder_list')
 
 # Category Views
-@login_required
+@admin_login_required
 def category_list(request):
     categories = SolutionCategory.objects.all()
 
@@ -256,7 +257,7 @@ def category_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     categories = categories.order_by(sort_by)
 
     context = {
@@ -270,7 +271,7 @@ def category_list(request):
     }
     return render(request, "category_list.html", context)
 
-@login_required
+@admin_login_required
 def category_create_edit(request, pk=None):
     category = None
     if pk:
@@ -293,7 +294,7 @@ def category_create_edit(request, pk=None):
     }
     return render(request, 'category_create_edit.html', context)
 
-@login_required
+@admin_login_required
 @require_POST
 def category_delete(request, pk):
     category = get_object_or_404(SolutionCategory, pk=pk)
@@ -301,7 +302,7 @@ def category_delete(request, pk):
     return redirect('category_list')
 
 # Article Views
-@login_required
+@admin_login_required
 def article_list(request):
     articles = Article.objects.all()
 
@@ -337,7 +338,7 @@ def article_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     articles = articles.order_by(sort_by)
 
     # Get all categories and tags for the filter dropdowns
@@ -360,7 +361,7 @@ def article_list(request):
     }
     return render(request, "article_list.html", context)
 
-@login_required
+@admin_login_required
 def article_create_edit(request, pk=None):
     if pk:
         article = get_object_or_404(Article, pk=pk)
@@ -386,27 +387,27 @@ def article_create_edit(request, pk=None):
     }
     return render(request, 'article_create_edit.html', context)
 
-@login_required
+@admin_login_required
 @require_POST
 def article_delete(request, pk):
     article = get_object_or_404(Article, pk=pk)
     article.delete()
     return redirect('article_list')
 
-@login_required
+@admin_login_required
 def article_search_api(request):
     query = request.GET.get('q', '')
     articles = Article.objects.filter(name__icontains=query).values('id', 'name')[:10] # Limit to 10 results
     return JsonResponse(list(articles), safe=False)
 
-@login_required
+@admin_login_required
 @require_http_methods(["GET"])
 def get_related_articles_api(request, article_id):
     article = get_object_or_404(Article, pk=article_id)
     related_articles = article.related_articles.all().values('id', 'name')
     return JsonResponse(list(related_articles), safe=False)
 
-@login_required
+@admin_login_required
 @require_http_methods(["POST"])
 def add_related_article_api(request, article_id):
     article = get_object_or_404(Article, pk=article_id)
@@ -415,7 +416,7 @@ def add_related_article_api(request, article_id):
         related_article_id = data.get('related_article_id')
         if not related_article_id:
             return JsonResponse({'error': 'related_article_id is required'}, status=400)
-        
+
         related_article = get_object_or_404(Article, pk=related_article_id)
         article.related_articles.add(related_article)
         return JsonResponse({'status': 'success', 'message': 'Related article added.'}, status=200)
@@ -424,7 +425,7 @@ def add_related_article_api(request, article_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required
+@admin_login_required
 @require_http_methods(["POST"])
 def remove_related_article_api(request, article_id):
     article = get_object_or_404(Article, pk=article_id)
@@ -433,7 +434,7 @@ def remove_related_article_api(request, article_id):
         related_article_id = data.get('related_article_id')
         if not related_article_id:
             return JsonResponse({'error': 'related_article_id is required'}, status=400)
-        
+
         related_article = get_object_or_404(Article, pk=related_article_id)
         article.related_articles.remove(related_article)
         return JsonResponse({'status': 'success', 'message': 'Related article removed.'}, status=200)

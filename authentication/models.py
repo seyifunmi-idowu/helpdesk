@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone as django_timezone
+from django.conf import settings
 
 
 class UserManager(BaseUserManager):
@@ -38,7 +39,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     firstName = models.CharField(max_length=191)
     lastName = models.CharField(max_length=191, null=True, blank=True)
     isEnabled = models.BooleanField(default=False)
-    verificationCode = models.CharField(max_length=191, unique=True, null=True, blank=True)
+    verificationCode = models.CharField(max_length=191, null=True, blank=True)
     timezone = models.CharField(max_length=191, null=True, blank=True)
     timeformat = models.CharField(max_length=191, null=True, blank=True)
     lastOtpGeneratedAt = models.DateTimeField(null=True, blank=True)
@@ -97,8 +98,15 @@ class UserInstance(models.Model):
         verbose_name_plural = "User Instances"
         db_table = "uv_user_instance"
 
+
     def __str__(self):
         return f"{self.user.email} instance from {self.source}"
+
+    @property
+    def get_profile_image_url(self):
+        if self.profileImage and hasattr(self.profileImage, 'url'):
+            return self.profileImage.url
+        return settings.STATIC_URL + 'dist/img/default-profile-img.png'
 
 
 class LeadSupportTeamThrough(models.Model):

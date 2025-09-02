@@ -32,6 +32,33 @@ class EmailManager:
         )
 
     @staticmethod
+    def send_otp_email(user, otp_code):
+        """
+        Sends an OTP to the user's email.
+        """
+        subject = "Your One-Time Password (OTP)"
+        message = f"""
+        Hello {user.firstName},
+
+        Your One-Time Password (OTP) is: {otp_code}
+
+        This OTP is valid for 5 minutes.
+
+        If you did not request this, please ignore this email.
+
+        Thanks,
+        The Admin Team
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+
+    @staticmethod
     def send_password_reset_email(user, reset_link):
         """
         Sends a password reset link to an existing user.

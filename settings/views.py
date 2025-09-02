@@ -9,7 +9,9 @@ import os
 from django.conf import settings
 from datetime import datetime
 import json
+from authentication.decorators import admin_login_required
 
+@admin_login_required
 def branding_settings_view(request):
     website_instance, created = Website.objects.get_or_create(pk=1, defaults={
         'name': 'Support Center',
@@ -36,7 +38,7 @@ def branding_settings_view(request):
             fs = FileSystemStorage(location=os.path.join(settings.MEDIA_ROOT, 'website_logos'))
             filename = fs.save(logo_file.name, logo_file)
             website_instance.logo = os.path.join('website_logos', filename)
-        
+
         # Site Description (Tag Line)
         knowledgebase_instance.site_description = request.POST.get('site_description', knowledgebase_instance.site_description)
 
@@ -71,7 +73,7 @@ def branding_settings_view(request):
 
         # Broadcast Tab
         knowledgebase_instance.broadcast_message = request.POST.get('broadcast_message', knowledgebase_instance.broadcast_message)
-        
+
         broadcast_from_date_str = request.POST.get('broadcast_from_date')
         if broadcast_from_date_str:
             knowledgebase_instance.broadcast_from_date = datetime.fromisoformat(broadcast_from_date_str)
@@ -101,6 +103,7 @@ def branding_settings_view(request):
     }
     return render(request, 'settings/branding_settings.html', context)
 
+@admin_login_required
 def spam_settings_view(request):
     website_instance, created = Website.objects.get_or_create(pk=1, defaults={
         'name': 'Support Center',
@@ -141,6 +144,7 @@ def spam_settings_view(request):
     }
     return render(request, 'settings/spam_settings.html', context)
 
+@admin_login_required
 def email_template_list(request):
     templates = EmailTemplate.objects.all().order_by('name')
     context = {
@@ -148,6 +152,7 @@ def email_template_list(request):
     }
     return render(request, 'settings/email_template_list.html', context)
 
+@admin_login_required
 def email_template_create(request):
     if request.method == 'POST':
         form = EmailTemplateForm(request.POST)
@@ -163,6 +168,7 @@ def email_template_create(request):
     }
     return render(request, 'settings/email_template_form.html', context)
 
+@admin_login_required
 def email_template_edit(request, pk):
     template = get_object_or_404(EmailTemplate, pk=pk)
     if request.method == 'POST':
@@ -179,6 +185,7 @@ def email_template_edit(request, pk):
     }
     return render(request, 'settings/email_template_form.html', context)
 
+@admin_login_required
 def email_template_delete(request, pk):
     template = get_object_or_404(EmailTemplate, pk=pk)
     template.delete()

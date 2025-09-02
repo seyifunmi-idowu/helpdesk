@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from .models import User, UserInstance
+from .models import User, UserInstance, SupportRole, SupportGroup, SupportTeam, SupportPrivilege, LeadSupportTeamThrough, AdminSupportGroupThrough, SupportGroupsTeamsThrough
 
 
 class UserAdmin(BaseUserAdmin):
@@ -35,3 +35,11 @@ class UserInstanceAdmin(admin.ModelAdmin):
 
 # Register custom User
 admin.site.register(User, UserAdmin)
+
+admin.site.register(SupportRole)
+admin.site.register(SupportGroup)
+admin.site.register(SupportTeam)
+admin.site.register(SupportPrivilege)
+admin.site.register(LeadSupportTeamThrough)
+admin.site.register(AdminSupportGroupThrough)
+admin.site.register(SupportGroupsTeamsThrough)

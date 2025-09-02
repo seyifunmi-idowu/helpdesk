@@ -1,0 +1,45 @@
+{% extends 'customer/customer_base.html' %}
+
+{% block title %}My Tickets{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">My Tickets</h1>
+
+    {% if tickets %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Subject</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Created At</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in tickets %}
+                        <tr>
+                            <td>{{ ticket.id }}</td>
+                            <td>{{ ticket.subject }}</td>
+                            <td>{{ ticket.status.description }}</td>
+                            <td>{{ ticket.priority.description }}</td>
+                            <td>{{ ticket.createdAt|date:"M d, Y H:i" }}</td>
+                            <td>{{ ticket.updatedAt|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'customer_view_ticket' ticket.id %}" class="btn btn-sm btn-primary">View</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>You have no tickets.</p>
+        <a href="{% url 'create_ticket_authenticated' %}" class="btn btn-success">Create New Ticket</a>
+    {% endif %}
+</div>
+{% endblock %}

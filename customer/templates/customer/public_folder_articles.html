@@ -1,0 +1,71 @@
+{% extends 'customer/customer_base.html' %}
+
+{% block title %}{{ folder.name }} Articles{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Added gradient header with modern styling -->
+    <div class="hero-section position-relative overflow-hidden mb-5" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 200px;">
+        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg></div>
+        <div class="container position-relative h-100 d-flex align-items-center">
+            <div class="text-white">
+                <h1 class="display-4 fw-bold mb-3">{{ folder.name }} Articles</h1>
+                <p class="lead mb-0 opacity-90">All articles from categories within this folder</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        {% if articles %}
+            <!-- Converted list-group to modern article cards -->
+            <div class="row g-4">
+                {% for article in articles %}
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm h-100 article-card" style="transition: all 0.3s ease;">
+                            <div class="card-body p-4">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="bg-gradient rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                            <i class="fas fa-file-alt text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title mb-2 fw-semibold text-dark">{{ article.name }}</h5>
+                                        <p class="card-text text-muted mb-3">{{ article.meta_description|default:article.content|truncatewords:30 }}</p>
+                                        <a href="{% url 'article_detail' article.slug %}" class="btn btn-outline-primary btn-sm">
+                                            Read Article <i class="fas fa-arrow-right ms-1"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <!-- Enhanced empty state with better styling -->
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-folder-open text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                </div>
+                <h3 class="text-muted mb-3">No Articles Found</h3>
+                <p class="text-muted">There are currently no articles in this folder.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Added hover effects for article cards -->
+<style>
+.article-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.article-card:hover .btn-outline-primary {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+</style>
+{% endblock %}

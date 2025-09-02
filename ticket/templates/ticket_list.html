@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tickets{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1>Tickets</h1>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+              <li class="breadcrumb-item active">Tickets</li>
+            </ol>
+          </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Filters -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">Filters</div>
+                    <ul class="list-group list-group-flush">
+                        {% for key, filter_data in sidebar_filters.items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="#" class="sidebar-filter" data-filter-type="{{ key }}">{{ filter_data.label }}</a>
+                            <span class="badge bg-primary rounded-pill">{{ filter_data.count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Sub-filters (Ticket Status) - Initially hidden -->
+                <div class="card mt-3" id="status-subfilters" style="display: none;">
+                    <div class="card-header">Status</div>
+                    <ul class="list-group list-group-flush">
+                        {% for code, status_data in status_counts.items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="#" class="status-subfilter" data-status-code="{{ code }}">{{ status_data.label }}</a>
+                            <span class="badge bg-secondary rounded-pill">{{ status_data.count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content Area - Ticket List -->
+            <div class="col-md-9">
+                {% if customer %}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'ticket_list' %}">Tickets</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Customer: {{ customer.firstName }} {% if customer.lastName %}{{ customer.lastName }}{% endif %} ({{ customer.email }})</li>
+                        </ol>
+                    </nav>
+                    <a href="{% url 'ticket_list' %}" class="btn btn-secondary">Clear Filter</a>
+                </div>
+                {% endif %}
+                <div class="card">
+                    <div class="card-header">Ticket List</div>
+                    <div class="card-body">
+                        {% if tickets %}
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Customer</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Assigned To</th>
+                                    <th>Created At</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticket-table-body">
+                                {% for ticket in tickets %}
+                                <tr>
+                                    <td><a href="{% url 'ticket_view' ticket.id %}">{{ ticket.subject }}</a></td>
+                                    <td>{{ ticket.customer.user.email }}</td>
+                                    <td>{{ ticket.status.description }}</td>
+                                    <td>{{ ticket.priority.description }}</td>
+                                    <td>{% if ticket.agent %}{{ ticket.agent.user.email }}{% else %}Unassigned{% endif %}</td>
+                                    <td>{{ ticket.createdAt|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p>No tickets found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+    <!-- /.content -->
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sidebarFilters = document.querySelectorAll('.sidebar-filter');
+        const statusSubfiltersCard = document.getElementById('status-subfilters');
+        const ticketTableBody = document.querySelector('#ticket-table-body');
+        const sidebarFilterBadges = document.querySelectorAll('.sidebar-filter');
+        const statusSubfilterBadges = document.querySelectorAll('.status-subfilter');
+
+        let currentPrimaryFilter = 'all'; // Default to 'all'
+
+        function updateTicketList(primaryFilter, statusCode = null) {
+            let url = '{% url "get_filtered_tickets_and_counts" %}';
+            const params = new URLSearchParams();
+            params.append('filter_type', primaryFilter);
+            if (statusCode) {
+                params.append('status_code', statusCode);
+            }
+            const customerId = "{{ customer_id }}";
+            if (customerId) {
+                params.append('customer_id', customerId);
+            }
+            url += `?${params.toString()}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Update ticket table
+                    ticketTableBody.innerHTML = '';
+                    if (data.tickets.length > 0) {
+                        data.tickets.forEach(ticket => {
+                            const row = `
+                                <tr>
+                                    <td><a href="/member/tickets/${ticket.id}/">${ticket.subject}</a></td>
+                                    <td>${ticket.customer_email}</td>
+                                    <td>${ticket.status_description}</td>
+                                    <td>${ticket.priority_description}</td>
+                                    <td>${ticket.agent_email}</td>
+                                    <td>${ticket.created_at}</td>
+                                </tr>
+                            `;
+                            ticketTableBody.insertAdjacentHTML('beforeend', row);
+                        });
+                    } else {
+                        ticketTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No tickets found.</td></tr>';
+                    }
+
+                    // Update sidebar filter counts
+                    for (const key in data.sidebar_filters) {
+                        const filterElement = document.querySelector(`.sidebar-filter[data-filter-type="${key}"]`);
+                        if (filterElement) {
+                            filterElement.nextElementSibling.textContent = data.sidebar_filters[key].count;
+                        }
+                    }
+
+                    // Update status sub-filter counts
+                    for (const code in data.status_counts) {
+                        const subfilterElement = document.querySelector(`.status-subfilter[data-status-code="${code}"]`);
+                        if (subfilterElement) {
+                            subfilterElement.nextElementSibling.textContent = data.status_counts[code].count;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching tickets:', error));
+        }
+
+        sidebarFilters.forEach(filter => {
+            filter.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Show sub-filters when any primary filter is clicked
+                statusSubfiltersCard.style.display = 'block';
+
+                const filterType = this.dataset.filterType;
+                currentPrimaryFilter = filterType; // Update current primary filter
+                updateTicketList(currentPrimaryFilter); // Fetch tickets for the selected primary filter
+
+                // Remove active class from all sidebar filters
+                sidebarFilters.forEach(f => f.classList.remove('active'));
+                // Add active class to the clicked filter
+                this.classList.add('active');
+            });
+        });
+
+        const statusSubfilters = document.querySelectorAll('.status-subfilter');
+        statusSubfilters.forEach(subfilter => {
+            subfilter.addEventListener('click', function(e) {
+                e.preventDefault();
+                const statusCode = this.dataset.statusCode;
+                updateTicketList(currentPrimaryFilter, statusCode); // Fetch tickets for current primary and selected status
+
+                // Remove active class from all status sub-filters
+                statusSubfilters.forEach(sf => sf.classList.remove('active'));
+                // Add active class to the clicked sub-filter
+                this.classList.add('active');
+            });
+        });
+
+        // Initial load
+        updateTicketList(currentPrimaryFilter);
+    });
+</script>
+{% endblock %}

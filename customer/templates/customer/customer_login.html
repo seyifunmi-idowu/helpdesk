@@ -1,0 +1,72 @@
+{% extends 'customer/customer_base.html' %}
+
+{% block title %}Customer Login{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="card-title mb-0">Customer Login</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        <div class="mb-3">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="email" value="{{ email }}">
+
+                        {% if not email %}
+                            {# Initial state: Only email input #}
+                            <div class="mb-3">
+                                <label for="id_email" class="form-label">Email address</label>
+                                <input type="email" name="email" id="id_email" class="form-control" placeholder="Enter your email" required>
+                            </div>
+                            <button type="submit" name="action" value="check_email" class="btn btn-primary w-100">Continue</button>
+                        {% elif show_password_form %}
+                            {# Password input state #}
+                            <div class="mb-3">
+                                <label for="id_password" class="form-label">Password</label>
+                                <input type="password" name="password" id="id_password" class="form-control" required>
+                            </div>
+                            <button type="submit" name="action" value="login_with_password" class="btn btn-primary w-100">Login with Password</button>
+                        {% elif otp_sent %}
+                            {# OTP input state #}
+                            <div class="mb-3">
+                                <label for="id_otp" class="form-label">OTP</label>
+                                <input type="text" name="otp" id="id_otp" class="form-control" required>
+                            </div>
+                            <button type="submit" name="action" value="verify_otp" class="btn btn-primary w-100">Verify OTP</button>
+                        {% else %}
+                            {# Choice state: After email, if password exists #}
+                            <p class="text-center">How would you like to log in?</p>
+                            <button type="submit" name="action" value="send_otp" class="btn btn-outline-primary w-100 mb-2">Send OTP to {{ email }}</button>
+                            {% if has_password %}
+                            <button type="submit" name="action" value="show_password_form" class="btn btn-outline-secondary w-100">Login with Password</button>
+                            {% endif %}
+                        {% endif %}
+                    </form>
+
+                    {% if otp_sent %}
+                    <form method="post" class="mt-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="email" value="{{ email }}">
+                        <button type="submit" name="action" value="send_otp" class="btn btn-link w-100">Resend OTP</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

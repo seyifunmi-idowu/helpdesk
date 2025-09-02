@@ -1,8 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from authentication.decorators import admin_login_required, customer_login_required
 from django.http import JsonResponse
 from django.conf import settings
+from django.db.models import Count
 
 from .services import PrivilegeService, GroupService, TeamService
 from .constants import PRIVILEGE_CHOICES
@@ -15,13 +17,13 @@ from django.urls import reverse
 from .forms import UserForm, UserInstanceForm
 
 
-@login_required
+@admin_login_required
 def dashboard(request):
     user = request.user
     context = {"view": "Dashboard", "user": user}
-    return render(request, "dashboard.html", context)
+    return render(request, "agent_dashboard.html", context)
 
-@login_required
+@admin_login_required
 def privilege_list(request):
     privileges = PrivilegeService.get_all_privileges()
     context = {
@@ -31,7 +33,7 @@ def privilege_list(request):
     }
     return render(request, "privileges_list.html", context)
 
-@login_required
+@admin_login_required
 def privilege_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -52,7 +54,7 @@ def privilege_create(request):
     }
     return render(request, "privileges_create.html", context)
 
-@login_required
+@admin_login_required
 def privilege_edit(request, privilege_id):
     privilege = PrivilegeService.get_privilege_by_id(privilege_id)
     if not privilege:
@@ -79,7 +81,7 @@ def privilege_edit(request, privilege_id):
     }
     return render(request, "privileges_edit.html", context)
 
-@login_required
+@admin_login_required
 def privilege_delete(request, privilege_id):
     if request.method == 'POST':
         privilege = PrivilegeService.get_privilege_by_id(privilege_id)
@@ -90,7 +92,7 @@ def privilege_delete(request, privilege_id):
             messages.error(request, "Privilege set not found.")
     return redirect('privilege_list')
 
-@login_required
+@admin_login_required
 def group_list(request):
     groups = GroupService.get_all_groups()
     context = {
@@ -100,7 +102,7 @@ def group_list(request):
     }
     return render(request, "group_list.html", context)
 
-@login_required
+@admin_login_required
 def group_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -126,7 +128,7 @@ def group_create(request):
     }
     return render(request, "group_create.html", context)
 
-@login_required
+@admin_login_required
 def group_edit(request, group_id):
     group = GroupService.get_group_by_id(group_id)
     if not group:
@@ -158,7 +160,7 @@ def group_edit(request, group_id):
     }
     return render(request, "group_edit.html", context)
 
-@login_required
+@admin_login_required
 def group_delete(request, group_id):
     if request.method == 'POST':
         group = GroupService.get_group_by_id(group_id)
@@ -170,7 +172,7 @@ def group_delete(request, group_id):
     return redirect('group_list')
 
 # Team Views
-@login_required
+@admin_login_required
 def team_list(request):
     teams = TeamService.get_all_teams()
     context = {
@@ -180,7 +182,7 @@ def team_list(request):
     }
     return render(request, "team_list.html", context)
 
-@login_required
+@admin_login_required
 def team_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -206,7 +208,7 @@ def team_create(request):
     }
     return render(request, "team_create.html", context)
 
-@login_required
+@admin_login_required
 def team_edit(request, team_id):
     team = TeamService.get_team_by_id(team_id)
     if not team:
@@ -238,7 +240,7 @@ def team_edit(request, team_id):
     }
     return render(request, "team_edit.html", context)
 
-@login_required
+@admin_login_required
 def team_delete(request, team_id):
     if request.method == 'POST':
         team = TeamService.get_team_by_id(team_id)
@@ -250,7 +252,7 @@ def team_delete(request, team_id):
     return redirect('team_list')
 
 
-@login_required
+@admin_login_required
 def agent_invite(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -299,7 +301,7 @@ def page404(request):
     context = {"view": "Dashboard", "user": user}
     return render(request, "404.html", context)
 
-@login_required
+@admin_login_required
 def agent_list(request):
     agents = UserInstance.objects.all().select_related('user')
     context = {
@@ -309,7 +311,7 @@ def agent_list(request):
     }
     return render(request, "agent_list.html", context)
 
-@login_required
+@admin_login_required
 def agent_edit(request, agent_id):
     user_instance = get_object_or_404(UserInstance, pk=agent_id)
     user = user_instance.user
@@ -340,7 +342,7 @@ def agent_edit(request, agent_id):
     }
     return render(request, "agent_create.html", context) # Reuse create template
 
-@login_required
+@admin_login_required
 def agent_delete(request, agent_id):
     if request.method == 'POST':
         agent = get_object_or_404(UserInstance, pk=agent_id)
@@ -351,7 +353,7 @@ def agent_delete(request, agent_id):
         messages.error(request, "Invalid request method.")
     return redirect('agent_list')
 
-@login_required
+@admin_login_required
 def create_agent(request):
     if request.method == 'POST':
         user_form = UserForm(request.POST)
@@ -398,3 +400,15 @@ def create_agent(request):
         "user_instance_form": user_instance_form,
     }
     return render(request, "agent_create.html", context)
+
+@admin_login_required
+def customer_list(request):
+    customer_role = SupportRole.objects.get(code='ROLE_CUSTOMER')
+    customers = UserInstance.objects.filter(supportRole=customer_role).select_related('user').annotate(ticket_count=Count('tickets_as_customer'))
+
+    context = {
+        "view": "Customers",
+        "user": request.user,
+        "customers": customers
+    }
+    return render(request, "customer_list.html", context)

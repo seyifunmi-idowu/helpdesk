@@ -1,5 +1,5 @@
 from django import forms
-from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse
+from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse, Thread, TicketStatus
 from authentication.models import SupportGroup, SupportTeam
 
 class WorkflowForm(forms.ModelForm):
@@ -101,3 +101,29 @@ class PreparedResponseForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description'}),
             'type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Type (e.g., public, private)'}),
         }
+
+class ThreadForm(forms.ModelForm):
+    status = forms.ModelChoiceField(queryset=TicketStatus.objects.all(), required=False)
+
+    class Meta:
+        model = Thread
+        fields = ['message', 'status']
+        widgets = {
+            'message': forms.Textarea(attrs={'class': 'form-control summernote', 'rows': 5, 'placeholder': 'Enter your reply...'}),
+        }
+
+class NoteForm(forms.ModelForm):
+    status = forms.ModelChoiceField(queryset=TicketStatus.objects.all(), required=False)
+
+    class Meta:
+        model = Thread
+        fields = ['message', 'status']
+        widgets = {
+            'message': forms.Textarea(attrs={'class': 'form-control summernote', 'rows': 5, 'placeholder': 'Enter your note...'}),
+        }
+
+class ForwardForm(forms.Form):
+    to = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'To'}))
+    subject = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Subject'}))
+    message = forms.CharField(widget=forms.Textarea(attrs={'class': 'form-control summernote', 'rows': 5, 'placeholder': 'Enter your message...'}))
+    status = forms.ModelChoiceField(queryset=TicketStatus.objects.all(), required=False)

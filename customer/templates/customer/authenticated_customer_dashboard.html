@@ -1,0 +1,40 @@
+{% extends 'customer/customer_base.html' %}
+
+{% block title %}My Dashboard{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">Welcome, {{ user.email }}!</h1>
+    <p class="lead">This is your authenticated customer dashboard.</p>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">My Tickets</h5>
+                    <p class="card-text">View and manage your support tickets.</p>
+                    <a href="{% url 'customer_ticket_list' %}" class="btn btn-primary">Go to Tickets</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Create New Ticket</h5>
+                    <p class="card-text">Submit a new support request.</p>
+                    <a href="{% url 'create_ticket_authenticated' %}" class="btn btn-success">Create Ticket</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">My Profile</h5>
+                    <p class="card-text">Manage your account information.</p>
+                    <a href="{% url 'customer_profile' %}" class="btn btn-info">Edit Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

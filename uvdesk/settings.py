@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "ticket",
     "knowledgebase",
     "settings",
+    "customer",
     # "configuration",
 ]
 

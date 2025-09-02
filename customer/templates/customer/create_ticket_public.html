@@ -1,0 +1,174 @@
+{% extends 'customer/customer_base.html' %}
+{% load static %}
+
+{% block title %}Create New Ticket{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
+                <div class="card-header text-white position-relative" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); padding: 2rem 2rem 1.5rem;">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                            <i class="fas fa-plus-circle fa-lg text-white"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title mb-1 fw-bold">Create New Ticket</h3>
+                            <p class="mb-0 text-white-50">Submit your request and we'll get back to you soon</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4" style="background-color: var(--background-white);">
+                    {% if messages %}
+                        <div class="mb-4">
+                            {% for message in messages %}
+                                 Enhanced alert styling
+                                <div class="alert alert-{{ message.tags }} border-0 shadow-sm" style="border-radius: 0.75rem;" role="alert">
+                                    <div class="d-flex align-items-center">
+                                        {% if message.tags == 'success' %}
+                                            <i class="fas fa-check-circle me-2"></i>
+                                        {% elif message.tags == 'error' %}
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-info-circle me-2"></i>
+                                        {% endif %}
+                                        {{ message }}
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        {% for field in form %}
+                            <div class="mb-4">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-semibold" style="color: var(--text-primary); font-size: 0.95rem;">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
+
+                                {% if field.field.widget.input_type == 'textarea' %}
+                                    <textarea
+                                        name="{{ field.name }}"
+                                        id="{{ field.id_for_label }}"
+                                        class="form-control shadow-sm"
+                                        style="border-radius: 0.75rem; border: 2px solid var(--border-color); padding: 1rem; min-height: 120px; resize: vertical; transition: all 0.3s ease;"
+                                        placeholder="{{ field.field.widget.attrs.placeholder|default:'Enter details...' }}"
+                                        {% if field.field.required %}required{% endif %}
+                                        onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 0.2rem rgba(37, 99, 235, 0.25)'"
+                                        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'"
+                                    >{{ field.value|default:'' }}</textarea>
+                                {% elif field.field.widget.input_type == 'select' %}
+                                    <select
+                                        name="{{ field.name }}"
+                                        id="{{ field.id_for_label }}"
+                                        class="form-select shadow-sm"
+                                        style="border-radius: 0.75rem; border: 2px solid var(--border-color); padding: 1rem; transition: all 0.3s ease;"
+                                        {% if field.field.required %}required{% endif %}
+                                        onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 0.2rem rgba(37, 99, 235, 0.25)'"
+                                        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'"
+                                    >
+                                        {% for choice in field.field.choices %}
+                                            <option value="{{ choice.0 }}" {% if choice.0 == field.value %}selected{% endif %}>{{ choice.1 }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input
+                                        type="{{ field.field.widget.input_type|default:'text' }}"
+                                        name="{{ field.name }}"
+                                        id="{{ field.id_for_label }}"
+                                        class="form-control shadow-sm"
+                                        style="border-radius: 0.75rem; border: 2px solid var(--border-color); padding: 1rem; transition: all 0.3s ease;"
+                                        placeholder="{{ field.field.widget.attrs.placeholder|default:'Enter '|add:field.label|lower }}"
+                                        value="{{ field.value|default:'' }}"
+                                        {% if field.field.required %}required{% endif %}
+                                        onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 0.2rem rgba(37, 99, 235, 0.25)'"
+                                        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'"
+                                    />
+                                {% endif %}
+
+                                {% if field.help_text %}
+                                    <div class="form-text mt-2" style="color: var(--text-secondary); font-size: 0.875rem;">
+                                        <i class="fas fa-info-circle me-1"></i>{{ field.help_text }}
+                                    </div>
+                                {% endif %}
+
+                                {% if field.errors %}
+                                    {% for error in field.errors %}
+                                        <div class="invalid-feedback d-block mt-2" style="color: #dc3545; font-size: 0.875rem;">
+                                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-5">
+                            <button type="button" class="btn btn-outline-secondary me-md-2 px-4 py-2" style="border-radius: 0.75rem; font-weight: 500;" onclick="history.back()">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn text-white px-5 py-2 position-relative"
+                                    style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); border: none; border-radius: 0.75rem; font-weight: 600; transition: all 0.3s ease; box-shadow: var(--shadow-md);"
+                                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-lg)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'"
+                                    onclick="this.innerHTML='<i class=\'fas fa-spinner fa-spin me-2\'></i>Submitting...'; this.disabled=true; this.form.submit();">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Ticket
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card-footer border-0 text-center py-3" style="background-color: var(--background-light);">
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        We typically respond within 24 hours during business days
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25) !important;
+    }
+
+    .form-control::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.7;
+    }
+
+    .btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .card {
+        transition: all 0.3s ease;
+    }
+
+    .alert {
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}

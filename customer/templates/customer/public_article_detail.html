@@ -1,0 +1,163 @@
+{% extends 'customer/customer_base.html' %}
+
+{% block title %}{{ article.name }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb bg-light rounded-3 p-3 shadow-sm">
+            <li class="breadcrumb-item">
+                <a href="{% url 'customer_dashboard' %}" class="text-decoration-none text-primary fw-medium">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+            </li>
+            {% if article.categories.first %}
+                {% with category=article.categories.first %}
+                    {% if category.folders.first %}
+                        {% with folder=category.folders.first %}
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'folder_detail' folder.id %}" class="text-decoration-none text-primary fw-medium">
+                                    <i class="fas fa-folder me-1"></i>{{ folder.name }}
+                                </a>
+                            </li>
+                        {% endwith %}
+                    {% endif %}
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'category_detail' category.folders.first.id category.id %}" class="text-decoration-none text-primary fw-medium">
+                            <i class="fas fa-tag me-1"></i>{{ category.name }}
+                        </a>
+                    </li>
+                {% endwith %}
+            {% endif %}
+            <li class="breadcrumb-item active fw-semibold" aria-current="page">{{ article.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-lg border-0 mb-4">
+        <div class="card-header bg-gradient text-white p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h1 class="mb-3 fw-bold">{{ article.name }}</h1>
+            <div class="d-flex flex-wrap gap-3 text-white-50">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-eye me-2"></i>
+                    <span class="fw-medium">{{ article.viewed }} views</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    <span class="fw-medium">Updated {{ article.date_updated|date:"M d, Y" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="article-content" style="line-height: 1.7; font-size: 1.1rem;">
+                {{ article.content|safe }}
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="text-center">
+                <h4 class="mb-3 text-dark fw-semibold">
+                    <i class="fas fa-question-circle text-primary me-2"></i>
+                    Was this article helpful?
+                </h4>
+                <div class="d-flex justify-content-center gap-3">
+                    <button class="btn btn-success btn-lg px-4 py-2 rounded-pill shadow-sm" style="transition: all 0.3s ease;">
+                        <i class="fas fa-thumbs-up me-2"></i>Yes, it helped!
+                    </button>
+                    <button class="btn btn-outline-danger btn-lg px-4 py-2 rounded-pill shadow-sm" style="transition: all 0.3s ease;">
+                        <i class="fas fa-thumbs-down me-2"></i>No, needs improvement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if related_articles %}
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-light border-0 p-4">
+            <h3 class="mb-0 text-dark fw-semibold">
+                <i class="fas fa-lightbulb text-warning me-2"></i>
+                Related Articles
+            </h3>
+        </div>
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+                {% for related_article in related_articles %}
+                <a href="{% url 'article_detail' related_article.slug %}"
+                   class="list-group-item list-group-item-action border-0 p-4 text-decoration-none"
+                   style="transition: all 0.3s ease;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-file-alt text-primary me-3"></i>
+                        <div>
+                            <h6 class="mb-1 text-dark fw-medium">{{ related_article.name }}</h6>
+                            <small class="text-muted">Click to read more</small>
+                        </div>
+                        <i class="fas fa-chevron-right text-muted ms-auto"></i>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Added hover effects and enhanced styling */
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.list-group-item-action:hover {
+    background-color: #f8f9fa !important;
+    transform: translateX(5px);
+}
+
+.breadcrumb-item a:hover {
+    color: #0056b3 !important;
+}
+
+.article-content h1, .article-content h2, .article-content h3 {
+    color: #2c3e50;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.article-content p {
+    margin-bottom: 1.2rem;
+}
+
+.article-content ul, .article-content ol {
+    margin-bottom: 1.2rem;
+    padding-left: 2rem;
+}
+
+.article-content blockquote {
+    border-left: 4px solid #667eea;
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+}
+
+.article-content code {
+    background-color: #f1f3f4;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.9em;
+}
+
+.article-content pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+</style>
+{% endblock %}

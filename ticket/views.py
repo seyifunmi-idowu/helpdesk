@@ -4,12 +4,155 @@ from django.contrib import messages
 import json
 from django.http import JsonResponse
 from django.db import models
-from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse
-from .forms import WorkflowForm, TicketTypeForm, TagForm, SavedReplyForm, PreparedResponseForm
-from authentication.models import UserInstance, SupportGroup, SupportTeam
+from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse, Ticket, TicketStatus, TicketPriority, Thread
+from .forms import WorkflowForm, TicketTypeForm, TagForm, SavedReplyForm, PreparedResponseForm, ThreadForm, NoteForm, ForwardForm
+from authentication.models import User, UserInstance, SupportGroup, SupportTeam
 from .constants import PREPARED_RESPONSE_ACTIONS, EMAIL_TEMPLATES, PRIORITIES, STATUSES
+from authentication.decorators import admin_login_required
 
-@login_required
+def format_count(count):
+    if 100 <= count <= 199:
+        return "100+"
+    elif 600 <= count <= 699:
+        return "600+"
+    elif count >= 1000:
+        return "1000+"
+    else:
+        return str(count)
+
+@admin_login_required
+def ticket_list(request):
+    # Base queryset for all tickets
+    all_tickets = Ticket.objects.all()
+
+    customer_id = request.GET.get('customer_id')
+    customer = None
+    if customer_id:
+        all_tickets = all_tickets.filter(customer__user__id=customer_id)
+        customer = User.objects.get(id=customer_id)
+
+    # Calculate sidebar counts
+    all_count = all_tickets.count()
+    new_count = all_tickets.filter(is_new=True).count()
+    unassigned_count = all_tickets.filter(agent__isnull=True).count()
+    unanswered_count = all_tickets.filter(isReplied=False).count()
+    my_tickets_count = all_tickets.filter(agent__user=request.user).count() # Assuming request.user is the agent
+    starred_count = all_tickets.filter(isStarred=True).count()
+    trashed_count = all_tickets.filter(isTrashed=True).count()
+
+    sidebar_filters = {
+        'all': {'label': 'All', 'count': format_count(all_count)},
+        'new': {'label': 'New', 'count': format_count(new_count)},
+        'unassigned': {'label': 'Unassigned', 'count': format_count(unassigned_count)},
+        'unanswered': {'label': 'Unanswered', 'count': format_count(unanswered_count)},
+        'my_tickets': {'label': 'My Tickets', 'count': format_count(my_tickets_count)},
+        'starred': {'label': 'Starred', 'count': format_count(starred_count)},
+        'trashed': {'label': 'Trashed', 'count': format_count(trashed_count)},
+    }
+
+    # Calculate sub-filter (status) counts for 'All' tickets initially
+    status_counts = {}
+    statuses = TicketStatus.objects.all().order_by('sortOrder') # Assuming sortOrder exists
+    for status in statuses:
+        count = all_tickets.filter(status=status).count()
+        status_counts[status.code] = {'label': status.description, 'count': format_count(count)}
+
+    context = {
+        "view": "Tickets",
+        "user": request.user,
+        "sidebar_filters": sidebar_filters,
+        "status_counts": status_counts,
+        "tickets": all_tickets, # For now, display all tickets
+        "customer": customer,
+        "customer_id": customer_id,
+    }
+    return render(request, "ticket_list.html", context)
+
+@admin_login_required
+def get_filtered_tickets_and_counts(request):
+    filter_type = request.GET.get('filter_type', 'all')
+    status_code = request.GET.get('status_code', None)
+    customer_id = request.GET.get('customer_id')
+
+    tickets_queryset = Ticket.objects.all()
+    if customer_id:
+        tickets_queryset = tickets_queryset.filter(customer__user__id=customer_id)
+
+    # Apply primary filter
+    if filter_type == 'new':
+        tickets_queryset = tickets_queryset.filter(is_new=True)
+    elif filter_type == 'unassigned':
+        tickets_queryset = tickets_queryset.filter(agent__isnull=True)
+    elif filter_type == 'unanswered':
+        tickets_queryset = tickets_queryset.filter(isReplied=False)
+    elif filter_type == 'my_tickets':
+        tickets_queryset = tickets_queryset.filter(agent__user=request.user)
+    elif filter_type == 'starred':
+        tickets_queryset = tickets_queryset.filter(isStarred=True)
+    elif filter_type == 'trashed':
+        tickets_queryset = tickets_queryset.filter(isTrashed=True)
+
+    # Apply status sub-filter if provided
+    if status_code:
+        tickets_queryset = tickets_queryset.filter(status__code=status_code)
+
+    # Recalculate sidebar counts based on the current primary filter (before status filter)
+    # This is important because the sidebar counts should reflect the primary category
+    # regardless of the selected status sub-filter.
+    all_tickets_for_primary_filter = Ticket.objects.all()
+    if customer_id:
+        all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(customer__user__id=customer_id)
+
+    if filter_type == 'new':
+        all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(is_new=True)
+    elif filter_type == 'unassigned':
+        all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(agent__isnull=True)
+    elif filter_type == 'unanswered':
+        all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(isReplied=False)
+    elif filter_type == 'my_tickets':
+        all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(agent__user=request.user)
+    elif filter_type == 'starred':
+        all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(isStarred=True)
+    elif filter_type == 'trashed':
+        all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(isTrashed=True)
+
+    sidebar_filters_updated = {
+        'all': {'label': 'All', 'count': format_count(all_tickets_for_primary_filter.count())},
+        'new': {'label': 'New', 'count': format_count(all_tickets_for_primary_filter.filter(is_new=True).count())},
+        'unassigned': {'label': 'Unassigned', 'count': format_count(all_tickets_for_primary_filter.filter(agent__isnull=True).count())},
+        'unanswered': {'label': 'Unanswered', 'count': format_count(all_tickets_for_primary_filter.filter(isReplied=False).count())},
+        'my_tickets': {'label': 'My Tickets', 'count': format_count(all_tickets_for_primary_filter.filter(agent__user=request.user).count())},
+        'starred': {'label': 'Starred', 'count': format_count(all_tickets_for_primary_filter.filter(isStarred=True).count())},
+        'trashed': {'label': 'Trashed', 'count': format_count(all_tickets_for_primary_filter.filter(isTrashed=True).count())},
+    }
+
+    # Recalculate status counts based on the current primary filter
+    status_counts_updated = {}
+    statuses = TicketStatus.objects.all().order_by('sortOrder')
+    for status in statuses:
+        count = all_tickets_for_primary_filter.filter(status=status).count()
+        status_counts_updated[status.code] = {'label': status.description, 'count': format_count(count)}
+
+    # Serialize tickets
+    tickets_data = []
+    for ticket in tickets_queryset:
+        tickets_data.append({
+            'id': ticket.id,
+            'subject': ticket.subject,
+            'customer_email': ticket.customer.user.email if ticket.customer and ticket.customer.user else 'N/A',
+            'status_description': ticket.status.description if ticket.status else 'N/A',
+            'priority_description': ticket.priority.description if ticket.priority else 'N/A',
+            'agent_email': ticket.agent.user.email if ticket.agent and ticket.agent.user else 'Unassigned',
+            'created_at': ticket.createdAt.strftime("%b %d, %Y %H:%M"),
+        })
+
+    return JsonResponse({
+        'tickets': tickets_data,
+        'sidebar_filters': sidebar_filters_updated,
+        'status_counts': status_counts_updated,
+    })
+
+@admin_login_required
 def workflow_list(request):
     workflows = Workflow.objects.all()
     context = {
@@ -19,7 +162,7 @@ def workflow_list(request):
     }
     return render(request, "workflow_list.html", context)
 
-@login_required
+@admin_login_required
 def workflow_create(request):
     if request.method == 'POST':
         form = WorkflowForm(request.POST)
@@ -39,7 +182,7 @@ def workflow_create(request):
     }
     return render(request, "workflow_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def workflow_edit(request, workflow_id):
     workflow = get_object_or_404(Workflow, pk=workflow_id)
     if request.method == 'POST':
@@ -61,7 +204,7 @@ def workflow_edit(request, workflow_id):
     }
     return render(request, "workflow_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def workflow_delete(request, workflow_id):
     workflow = get_object_or_404(Workflow, pk=workflow_id)
     if request.method == 'POST':
@@ -72,7 +215,7 @@ def workflow_delete(request, workflow_id):
     return redirect('workflow_list')
 
 
-@login_required
+@admin_login_required
 def ticket_type_list(request):
     ticket_types = TicketType.objects.all()
 
@@ -94,7 +237,7 @@ def ticket_type_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     ticket_types = ticket_types.order_by(sort_by)
 
     context = {
@@ -108,7 +251,7 @@ def ticket_type_list(request):
     }
     return render(request, "ticket_type_list.html", context)
 
-@login_required
+@admin_login_required
 def ticket_type_create(request):
     if request.method == 'POST':
         form = TicketTypeForm(request.POST)
@@ -128,7 +271,7 @@ def ticket_type_create(request):
     }
     return render(request, "ticket_type_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def ticket_type_edit(request, ticket_type_id):
     ticket_type = get_object_or_404(TicketType, pk=ticket_type_id)
     if request.method == 'POST':
@@ -150,7 +293,7 @@ def ticket_type_edit(request, ticket_type_id):
     }
     return render(request, "ticket_type_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def ticket_type_delete(request, ticket_type_id):
     ticket_type = get_object_or_404(TicketType, pk=ticket_type_id)
     if request.method == 'POST':
@@ -160,7 +303,7 @@ def ticket_type_delete(request, ticket_type_id):
         messages.error(request, "Invalid request method.")
     return redirect('ticket_type_list')
 
-@login_required
+@admin_login_required
 def tag_list(request):
     tags = Tag.objects.all()
 
@@ -175,7 +318,7 @@ def tag_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     tags = tags.order_by(sort_by)
 
     context = {
@@ -188,7 +331,7 @@ def tag_list(request):
     }
     return render(request, "tag_list.html", context)
 
-@login_required
+@admin_login_required
 def tag_create(request):
     if request.method == 'POST':
         form = TagForm(request.POST)
@@ -208,7 +351,7 @@ def tag_create(request):
     }
     return render(request, "tag_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def tag_edit(request, tag_id):
     tag = get_object_or_404(Tag, pk=tag_id)
     if request.method == 'POST':
@@ -230,7 +373,7 @@ def tag_edit(request, tag_id):
     }
     return render(request, "tag_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def tag_delete(request, tag_id):
     tag = get_object_or_404(Tag, pk=tag_id)
     if request.method == 'POST':
@@ -240,7 +383,7 @@ def tag_delete(request, tag_id):
         messages.error(request, "Invalid request method.")
     return redirect('tag_list')
 
-@login_required
+@admin_login_required
 def saved_reply_list(request):
     saved_replies = SavedReplies.objects.all()
 
@@ -266,7 +409,7 @@ def saved_reply_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     saved_replies = saved_replies.order_by(sort_by)
 
     context = {
@@ -280,7 +423,7 @@ def saved_reply_list(request):
     }
     return render(request, "saved_reply_list.html", context)
 
-@login_required
+@admin_login_required
 def saved_reply_create(request):
     if request.method == 'POST':
         form = SavedReplyForm(request.POST)
@@ -308,7 +451,7 @@ def saved_reply_create(request):
     }
     return render(request, "saved_reply_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def saved_reply_edit(request, saved_reply_id):
     saved_reply = get_object_or_404(SavedReplies, pk=saved_reply_id)
     if request.method == 'POST':
@@ -330,7 +473,7 @@ def saved_reply_edit(request, saved_reply_id):
     }
     return render(request, "saved_reply_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def saved_reply_delete(request, saved_reply_id):
     saved_reply = get_object_or_404(SavedReplies, pk=saved_reply_id)
     if request.method == 'POST':
@@ -340,7 +483,7 @@ def saved_reply_delete(request, saved_reply_id):
         messages.error(request, "Invalid request method.")
     return redirect('saved_reply_list')
 
-@login_required
+@admin_login_required
 def prepared_response_list(request):
     prepared_responses = PreparedResponse.objects.all()
 
@@ -360,7 +503,7 @@ def prepared_response_list(request):
 
     if order == 'desc':
         sort_by = '-' + sort_by
-    
+
     prepared_responses = prepared_responses.order_by(sort_by)
 
     context = {
@@ -374,7 +517,7 @@ def prepared_response_list(request):
     }
     return render(request, "prepared_response_list.html", context)
 
-@login_required
+@admin_login_required
 def prepared_response_create(request):
     if request.method == 'POST':
         form = PreparedResponseForm(request.POST)
@@ -404,7 +547,7 @@ def prepared_response_create(request):
     }
     return render(request, "prepared_response_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def prepared_response_edit(request, prepared_response_id):
     prepared_response = get_object_or_404(PreparedResponse, pk=prepared_response_id)
     current_actions_json = prepared_response.actions if prepared_response.actions else []
@@ -449,7 +592,7 @@ def prepared_response_edit(request, prepared_response_id):
     }
     return render(request, "prepared_response_create_edit.html", context)
 
-@login_required
+@admin_login_required
 def prepared_response_delete(request, prepared_response_id):
     prepared_response = get_object_or_404(PreparedResponse, pk=prepared_response_id)
     if request.method == 'POST':
@@ -460,39 +603,253 @@ def prepared_response_delete(request, prepared_response_id):
     return redirect('prepared_response_list')
 
 # API Views
-@login_required
+@admin_login_required
 def get_agents(request):
     agents = UserInstance.objects.filter(supportRole__code='ROLE_AGENT').values('id', name=models.F('user__firstName'))
     return JsonResponse(list(agents), safe=False)
 
-@login_required
+@admin_login_required
 def get_groups(request):
     groups = SupportGroup.objects.all().values('id', 'name')
     return JsonResponse(list(groups), safe=False)
 
-@login_required
+@admin_login_required
 def get_teams(request):
     teams = SupportTeam.objects.all().values('id', 'name')
     return JsonResponse(list(teams), safe=False)
 
-@login_required
+@admin_login_required
 def get_tags(request):
     tags = Tag.objects.all().values('id', 'name')
     return JsonResponse(list(tags), safe=False)
 
-@login_required
+@admin_login_required
 def get_ticket_types(request):
     ticket_types = TicketType.objects.all().values('id', name=models.F('code'))
     return JsonResponse(list(ticket_types), safe=False)
 
-@login_required
+@admin_login_required
 def get_priorities(request):
     return JsonResponse(PRIORITIES, safe=False)
 
-@login_required
+@admin_login_required
 def get_statuses(request):
     return JsonResponse(STATUSES, safe=False)
 
-@login_required
+@admin_login_required
 def get_email_templates(request):
     return JsonResponse(EMAIL_TEMPLATES, safe=False)
+
+@admin_login_required
+def update_ticket_status(request, ticket_id):
+    if request.method == 'POST':
+        try:
+            ticket = get_object_or_404(Ticket, id=ticket_id)
+            new_status_id = request.POST.get('status_id')
+            if new_status_id:
+                new_status = get_object_or_404(TicketStatus, id=new_status_id)
+                ticket.status = new_status
+                ticket.save()
+                return JsonResponse({'success': True, 'message': 'Ticket status updated successfully.'})
+            else:
+                return JsonResponse({'success': False, 'error': 'No status ID provided.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
+
+@admin_login_required
+def update_ticket_priority(request, ticket_id):
+    if request.method == 'POST':
+        try:
+            ticket = get_object_or_404(Ticket, id=ticket_id)
+            new_priority_id = request.POST.get('priority_id')
+            if new_priority_id:
+                new_priority = get_object_or_404(TicketPriority, id=new_priority_id)
+                ticket.priority = new_priority
+                ticket.save()
+                return JsonResponse({'success': True, 'message': 'Ticket priority updated successfully.'})
+            else:
+                return JsonResponse({'success': False, 'error': 'No priority ID provided.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
+
+@admin_login_required
+def update_ticket_agent(request, ticket_id):
+    if request.method == 'POST':
+        try:
+            ticket = get_object_or_404(Ticket, id=ticket_id)
+            new_agent_id = request.POST.get('agent_id')
+            if new_agent_id and new_agent_id != '0': # Check for '0' as unassigned
+                new_agent = get_object_or_404(UserInstance, id=new_agent_id)
+                ticket.agent = new_agent
+            else:
+                ticket.agent = None # Set to None for unassigned
+            ticket.save()
+            return JsonResponse({'success': True, 'message': 'Ticket agent updated successfully.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
+
+@admin_login_required
+def update_ticket_type(request, ticket_id):
+    if request.method == 'POST':
+        try:
+            ticket = get_object_or_404(Ticket, id=ticket_id)
+            new_type_id = request.POST.get('type_id')
+            if new_type_id:
+                new_type = get_object_or_404(TicketType, id=new_type_id)
+                ticket.type = new_type
+                ticket.save()
+                return JsonResponse({'success': True, 'message': 'Ticket type updated successfully.'})
+            else:
+                return JsonResponse({'success': False, 'error': 'No type ID provided.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
+
+@admin_login_required
+def update_ticket_group(request, ticket_id):
+    if request.method == 'POST':
+        try:
+            ticket = get_object_or_404(Ticket, id=ticket_id)
+            new_group_id = request.POST.get('group_id')
+            if new_group_id and new_group_id != '0': # Check for '0' as unassigned
+                new_group = get_object_or_404(SupportGroup, id=new_group_id)
+                ticket.supportGroup = new_group
+            else:
+                ticket.supportGroup = None # Set to None for unassigned
+            ticket.save()
+            return JsonResponse({'success': True, 'message': 'Ticket group updated successfully.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
+
+@admin_login_required
+def update_ticket_team(request, ticket_id):
+    if request.method == 'POST':
+        try:
+            ticket = get_object_or_404(Ticket, id=ticket_id)
+            new_team_id = request.POST.get('team_id')
+            if new_team_id and new_team_id != '0': # Check for '0' as unassigned
+                new_team = get_object_or_404(SupportTeam, id=new_team_id)
+                ticket.supportTeam = new_team
+            else:
+                ticket.supportTeam = None # Set to None for unassigned
+            ticket.save()
+            return JsonResponse({'success': True, 'message': 'Ticket team updated successfully.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
+
+@admin_login_required
+def update_ticket_team(request, ticket_id):
+    if request.method == 'POST':
+        try:
+            ticket = get_object_or_404(Ticket, id=ticket_id)
+            new_team_id = request.POST.get('team_id')
+            if new_team_id and new_team_id != '0': # Check for '0' as unassigned
+                new_team = get_object_or_404(SupportTeam, id=new_team_id)
+                ticket.supportTeam = new_team
+            else:
+                ticket.supportTeam = None # Set to None for unassigned
+            ticket.save()
+            return JsonResponse({'success': True, 'message': 'Ticket team updated successfully.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
+
+@admin_login_required
+def ticket_view(request, ticket_id):
+    ticket = get_object_or_404(Ticket, id=ticket_id)
+    threads = ticket.threads.all().order_by('createdAt')
+
+    if request.method == 'POST':
+        if 'reply_form' in request.POST:
+            reply_form = ThreadForm(request.POST)
+            if reply_form.is_valid():
+                if not reply_form.cleaned_data['message']:
+                    messages.error(request, 'Reply message cannot be empty.')
+                else:
+                    thread = reply_form.save(commit=False)
+                    thread.ticket = ticket
+                    thread.user = request.user.user_instances.first()
+                    thread.threadType = 'reply'
+                    thread.createdBy = 'agent'
+                    thread.save()
+                    if reply_form.cleaned_data['status']:
+                        ticket.status = reply_form.cleaned_data['status']
+                        ticket.save()
+                    messages.success(request, 'Reply added successfully.')
+                    return redirect('ticket_view', ticket_id=ticket.id)
+            else:
+                messages.error(request, 'Please correct the errors below.')
+        elif 'note_form' in request.POST:
+            note_form = NoteForm(request.POST)
+            if note_form.is_valid():
+                if not note_form.cleaned_data['message']:
+                    messages.error(request, 'Note message cannot be empty.')
+                else:
+                    thread = note_form.save(commit=False)
+                    thread.ticket = ticket
+                    thread.user = request.user.user_instances.first()
+                    thread.threadType = 'note'
+                    thread.createdBy = 'agent'
+                    thread.save()
+                    if note_form.cleaned_data['status']:
+                        ticket.status = note_form.cleaned_data['status']
+                        ticket.save()
+                    messages.success(request, 'Note added successfully.')
+                    return redirect('ticket_view', ticket_id=ticket.id)
+            else:
+                messages.error(request, 'Please correct the errors below.')
+        elif 'forward_form' in request.POST:
+            forward_form = ForwardForm(request.POST)
+            if forward_form.is_valid():
+                if not forward_form.cleaned_data['message']:
+                    messages.error(request, 'Forward message cannot be empty.')
+                else:
+                    # Create a new thread for the forward
+                    thread = Thread.objects.create(
+                        ticket=ticket,
+                        user=request.user.user_instances.first(),
+                        threadType='forward',
+                        createdBy='agent',
+                        message=forward_form.cleaned_data['message']
+                    )
+                    if forward_form.cleaned_data['status']:
+                        ticket.status = forward_form.cleaned_data['status']
+                        ticket.save()
+                    # Here you would add the logic to send the email
+                    messages.success(request, 'Ticket forwarded successfully.')
+                    return redirect('ticket_view', ticket_id=ticket.id)
+            else:
+                messages.error(request, 'Please correct the errors below.')
+
+    reply_form = ThreadForm()
+    note_form = NoteForm()
+    forward_form = ForwardForm()
+
+    statuses = TicketStatus.objects.all()
+    priorities = TicketPriority.objects.all()
+    agents = UserInstance.objects.filter(supportRole__code='ROLE_AGENT')
+    ticket_types = TicketType.objects.all()
+    groups = SupportGroup.objects.all()
+    teams = SupportTeam.objects.all()
+
+    context = {
+        'view': 'Ticket View',
+        'user': request.user,
+        'ticket': ticket,
+        'threads': threads,
+        'reply_form': reply_form,
+        'note_form': note_form,
+        'forward_form': forward_form,
+        'statuses': statuses,
+        'priorities': priorities,
+        'agents': agents,
+        'ticket_types': ticket_types,
+        'groups': groups,
+        'teams': teams,
+    }
+    return render(request, 'ticket_view.html', context)

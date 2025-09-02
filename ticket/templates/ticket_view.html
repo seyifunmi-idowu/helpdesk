@@ -1,0 +1,578 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1>Ticket #{{ ticket.id }}</h1>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+              <li class="breadcrumb-item"><a href="{% url 'ticket_list' %}">Tickets</a></li>
+              <li class="breadcrumb-item active">Ticket #{{ ticket.id }}</li>
+            </ol>
+          </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+        <div class="row">
+          <!-- Left Sidebar -->
+          <div class="col-md-3">
+            <div class="card card-primary card-outline">
+              <div class="card-header">
+                <h3 class="card-title">Customer Information</h3>
+              </div>
+              <div class="card-body box-profile">
+                <div class="text-center">
+                  <img class="profile-user-img img-fluid img-circle" src="{{ ticket.customer.get_profile_image_url }}" alt="User profile picture">
+                </div>
+                <h3 class="profile-username text-center">{{ ticket.customer.user.firstName }} {% if ticket.customer.user.lastName %}{{ ticket.customer.user.lastName }}{% endif %}</h3>
+                <p class="text-muted text-center">{{ ticket.customer.user.email }}</p>
+              </div>
+              <!-- /.card-body -->
+            </div>
+            <!-- /.card -->
+
+            <div class="card card-primary">
+              <div class="card-header">
+                <h3 class="card-title">Ticket Details</h3>
+              </div>
+              <!-- /.card-header -->
+              <div class="card-body">
+                <strong><i class="fas fa-info-circle mr-1"></i> Status</strong>
+                <p class="text-muted">
+                    <select class="form-control" id="ticket-status-select" onchange="updateTicketStatus(this.value)">
+                        {% for status in statuses %}
+                            <option value="{{ status.id }}" {% if status.id == ticket.status.id %}selected{% endif %}>{{ status.description }}</option>
+                        {% endfor %}
+                    </select>
+                </p>
+                <hr>
+                <strong><i class="fas fa-exclamation-triangle mr-1"></i> Priority</strong>
+                <p class="text-muted">
+                    <select class="form-control" id="ticket-priority-select" onchange="updateTicketPriority(this.value)">
+                        {% for priority in priorities %}
+                            <option value="{{ priority.id }}" {% if priority.id == ticket.priority.id %}selected{% endif %}>{{ priority.description }}</option>
+                        {% endfor %}
+                    </select>
+                </p>
+                <hr>
+                <strong><i class="fas fa-tag mr-1"></i> Type</strong>
+                <p class="text-muted">
+                    <select class="form-control" id="ticket-type-select" onchange="updateTicketType(this.value)">
+                        {% for type in ticket_types %}
+                            <option value="{{ type.id }}" {% if type.id == ticket.type.id %}selected{% endif %}>{{ type.description }}</option>
+                        {% endfor %}
+                    </select>
+                </p>
+                <hr>
+                <strong><i class="fas fa-user-tie mr-1"></i> Agent</strong>
+                <p class="text-muted">
+                    <select class="form-control" id="ticket-agent-select" onchange="updateTicketAgent(this.value)">
+                        <option value="0" {% if not ticket.agent %}selected{% endif %}>Unassigned</option>
+                        {% for agent in agents %}
+                            <option value="{{ agent.id }}" {% if agent.id == ticket.agent.id %}selected{% endif %}>{{ agent.user.email }}</option>
+                        {% endfor %}
+                    </select>
+                </p>
+                <hr>
+                <strong><i class="fas fa-users mr-1"></i> Group</strong>
+                <p class="text-muted">
+                    <select class="form-control" id="ticket-group-select" onchange="updateTicketGroup(this.value)">
+                        <option value="0" {% if not ticket.supportGroup %}selected{% endif %}>Not Assigned</option>
+                        {% for group in groups %}
+                            <option value="{{ group.id }}" {% if group.id == ticket.supportGroup.id %}selected{% endif %}>{{ group.name }}</option>
+                        {% endfor %}
+                    </select>
+                </p>
+                <hr>
+                <strong><i class="fas fa-user-friends mr-1"></i> Team</strong>
+                <p class="text-muted">
+                    <select class="form-control" id="ticket-team-select" onchange="updateTicketTeam(this.value)">
+                        <option value="0" {% if not ticket.supportTeam %}selected{% endif %}>Not Assigned</option>
+                        {% for team in teams %}
+                            <option value="{{ team.id }}" {% if team.id == ticket.supportTeam.id %}selected{% endif %}>{{ team.name }}</option>
+                        {% endfor %}
+                    </select>
+                </p>
+                <hr>
+                <strong><i class="fas fa-globe-americas mr-1"></i> Country</strong>
+                <p class="text-muted">
+                    <input type="text" class="form-control" id="ticket-country-input" value="{% if ticket.country %}{{ ticket.country }}{% endif %}" onchange="updateTicketCountry(this.value)">
+                </p>
+                <hr>
+                <strong><i class="fas-fa-reply mr-1"></i> Total Replies</strong>
+                <p class="text-muted">{{ threads|length|add:"-1" }}</p>
+                <hr>
+                <strong><i class="fas fa-clock mr-1"></i> Timestamp</strong>
+                <p class="text-muted">{{ ticket.createdAt|date:"M d, Y H:i" }}</p>
+                <hr>
+                <strong><i class="fas fa-desktop mr-1"></i> Channel</strong>
+                <p class="text-muted">{{ ticket.source }}</p>
+              </div>
+              <!-- /.card-body -->
+            </div>
+            <!-- /.card -->
+          </div>
+          <!-- /.col -->
+
+          <!-- Main Content -->
+          <div class="col-md-9">
+            <!-- Ticket History -->
+            <div class="card">
+              <div class="card-header p-2">
+                <ul class="nav nav-pills">
+                  <li class="nav-item"><a class="nav-link active" href="#all_threads" data-toggle="tab">All Threads</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#replies" data-toggle="tab">Replies</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#forwards" data-toggle="tab">Forwards</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#notes" data-toggle="tab">Notes</a></li>
+                </ul>
+              </div><!-- /.card-header -->
+              <div class="card-body">
+                <div class="tab-content">
+                  <div class="active tab-pane" id="all_threads">
+                    {% for thread in threads %}
+                      <div class="post">
+                        <div class="user-block">
+                          <img class="img-circle img-bordered-sm" src="{% if thread.user %}{{ thread.user.get_profile_image_url }}{% else %}{% static 'dist/img/default-profile.png' %}{% endif %}" alt="user image">
+                          <span class="username">
+                            <a href="#">{% if thread.createdBy == 'agent' %}{{ thread.user.user.firstName }}{% else %}{{ ticket.customer.user.firstName }}{% endif %}</a>
+                          </span>
+                          <span class="description">{{ thread.threadType|title }} - {{ thread.createdAt|date:"M d, Y H:i" }}</span>
+                        </div>
+                        <!-- /.user-block -->
+                        <p>
+                          {{ thread.message|safe }}
+                        </p>
+                      </div>
+                    {% endfor %}
+                  </div>
+                  <!-- /.tab-pane -->
+                  <div class="tab-pane" id="replies">
+                    {% for thread in threads %}
+                      {% if thread.threadType == 'reply' %}
+                        <div class="post">
+                          <div class="user-block">
+                            <img class="img-circle img-bordered-sm" src="{% if thread.user %}{{ thread.user.get_profile_image_url }}{% else %}{% static 'dist/img/default-profile.png' %}{% endif %}" alt="user image">
+                            <span class="username">
+                              <a href="#">{% if thread.createdBy == 'agent' %}{{ thread.user.user.firstName }}{% else %}{{ ticket.customer.user.firstName }}{% endif %}</a>
+                            </span>
+                            <span class="description">{{ thread.threadType|title }} - {{ thread.createdAt|date:"M d, Y H:i" }}</span>
+                          </div>
+                          <!-- /.user-block -->
+                          <p>
+                            {{ thread.message|safe }}
+                          </p>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                  <!-- /.tab-pane -->
+
+                  <div class="tab-pane" id="forwards">
+                    {% for thread in threads %}
+                      {% if thread.threadType == 'forward' %}
+                        <div class="post">
+                          <div class="user-block">
+                            <img class="img-circle img-bordered-sm" src="{% if thread.user %}{{ thread.user.get_profile_image_url }}{% else %}{% static 'dist/img/default-profile.png' %}{% endif %}" alt="user image">
+                            <span class="username">
+                              <a href="#">{% if thread.createdBy == 'agent' %}{{ thread.user.user.firstName }}{% else %}{{ ticket.customer.user.firstName }}{% endif %}</a>
+                            </span>
+                            <span class="description">{{ thread.threadType|title }} - {{ thread.createdAt|date:"M d, Y H:i" }}</span>
+                          </div>
+                          <!-- /.user-block -->
+                          <p>
+                            {{ thread.message|safe }}
+                          </p>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                  <!-- /.tab-pane -->
+
+                  <div class="tab-pane" id="notes">
+                    {% for thread in threads %}
+                      {% if thread.threadType == 'note' %}
+                        <div class="post">
+                          <div class="user-block">
+                            <img class="img-circle img-bordered-sm" src="{% if thread.user %}{{ thread.user.get_profile_image_url }}{% else %}{% static 'dist/img/default-profile.png' %}{% endif %}" alt="user image">
+                            <span class="username">
+                              <a href="#">{% if thread.createdBy == 'agent' %}{{ thread.user.user.firstName }}{% else %}{{ ticket.customer.user.firstName }}{% endif %}</a>
+                            </span>
+                            <span class="description">{{ thread.threadType|title }} - {{ thread.createdAt|date:"M d, Y H:i" }}</span>
+                          </div>
+                          <!-- /.user-block -->
+                          <p>
+                            {{ thread.message|safe }}
+                          </p>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                  <!-- /.tab-pane -->
+                </div>
+                <!-- /.tab-content -->
+              </div><!-- /.card-body -->
+            </div>
+            <!-- /.card -->
+
+            <!-- Agent Actions -->
+            <div class="card">
+              <div class="card-header p-2">
+                <ul class="nav nav-pills">
+                  <li class="nav-item"><a class="nav-link active" href="#reply" data-toggle="tab">Reply</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#forward" data-toggle="tab">Forward</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#note" data-toggle="tab">Note</a></li>
+                </ul>
+              </div><!-- /.card-header -->
+              <div class="card-body">
+                <div class="tab-content">
+                  <div class="active tab-pane" id="reply">
+                    <form class="form-horizontal" method="post" id="reply-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="reply_form">
+                        <input type="hidden" name="status" id="reply-status">
+                        <div class="form-group row">
+                            <div class="col-sm-12">
+                                {{ reply_form.message }}
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-sm-12">
+                                <div class="btn-group">
+                                    <button type="submit" class="btn btn-danger" onclick="return validateReplyForm('');">Submit</button>
+                                    <button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split" data-toggle="dropdown">
+                                        <span class="sr-only">Toggle Dropdown</span>
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        {% for status in statuses %}
+                                            <a class="dropdown-item" href="#" onclick="return validateReplyForm('{{ status.id }}');">Submit and {{ status.description }}</a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                  </div>
+                  <!-- /.tab-pane -->
+                  <div class="tab-pane" id="forward">
+                    <form class="form-horizontal" method="post" id="forward-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="forward_form">
+                      <div class="form-group row">
+                        <label for="inputTo" class="col-sm-2 col-form-label">To</label>
+                        <div class="col-sm-10">
+                          {{ forward_form.to }}
+                        </div>
+                      </div>
+                      <div class="form-group row">
+                        <label for="inputSubject" class="col-sm-2 col-form-label">Subject</label>
+                        <div class="col-sm-10">
+                          {{ forward_form.subject }}
+                        </div>
+                      </div>
+                      <div class="form-group row">
+                        <div class="col-sm-12">
+                          {{ forward_form.message }}
+                        </div>
+                      </div>
+                      <div class="form-group row">
+                        <div class="col-sm-12">
+                          <button type="submit" class="btn btn-danger" onclick="return validateForwardForm();">Forward</button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                  <!-- /.tab-pane -->
+
+                  <div class="tab-pane" id="note">
+                    <form class="form-horizontal" method="post" id="note-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="note_form">
+                        <input type="hidden" name="status" id="note-status">
+                        <div class="form-group row">
+                            <div class="col-sm-12">
+                                {{ note_form.message }}
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-sm-12">
+                                <div class="btn-group">
+                                    <button type="submit" class="btn btn-danger" onclick="return validateNoteForm('');">Submit Note</button>
+                                    <button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split" data-toggle="dropdown">
+                                        <span class="sr-only">Toggle Dropdown</span>
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        {% for status in statuses %}
+                                            <a class="dropdown-item" href="#" onclick="return validateNoteForm('{{ status.id }}');">Submit and {{ status.description }}</a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                  </div>
+                  <!-- /.tab-pane -->
+                </div>
+                <!-- /.tab-content -->
+              </div><!-- /.card-body -->
+            </div>
+            <!-- /.card -->
+          </div>
+          <!-- /.col -->
+        </div>
+        <!-- /.row -->
+      </div><!-- /.container-fluid -->
+    </section>
+    <!-- /.content -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function validateReplyForm(statusId) {
+    console.log("validateReplyForm called with statusId: ", statusId);
+    var message = $('#reply-form .summernote').summernote('isEmpty') ? '' : $('#reply-form .summernote').summernote('code');
+    console.log("Reply message content: ", message);
+    if (message.trim() === '') {
+      alert('Reply message cannot be empty.');
+      console.log("Reply message is empty. Preventing submission.");
+      return false;
+    }
+    $('#reply-status').val(statusId);
+    console.log("Reply status set to: ", statusId);
+    $('#reply-form').submit();
+    console.log("Reply form submitted.");
+    return false; // Prevent default link behavior
+  }
+
+  function validateNoteForm(statusId) {
+    console.log("validateNoteForm called with statusId: ", statusId);
+    var message = $('#note-form .summernote').summernote('isEmpty') ? '' : $('#note-form .summernote').summernote('code');
+    console.log("Note message content: ", message);
+    if (message.trim() === '') {
+      alert('Note message cannot be empty.');
+      console.log("Note message is empty. Preventing submission.");
+      return false;
+    }
+    $('#note-status').val(statusId);
+    console.log("Note status set to: ", statusId);
+    $('#note-form').submit();
+    console.log("Note form submitted.");
+    return false; // Prevent default link behavior
+  }
+
+  function validateForwardForm() {
+    console.log("validateForwardForm called.");
+    var to = $('#forward-form input[name="to"]').val();
+    var subject = $('#forward-form input[name="subject"]').val();
+    var message = $('#forward-form .summernote').summernote('isEmpty') ? '' : $('#forward-form .summernote').summernote('code');
+
+    console.log("Forward To: ", to);
+    console.log("Forward Subject: ", subject);
+    console.log("Forward Message: ", message);
+
+    if (to.trim() === '') {
+      alert('Recipient (To) cannot be empty.');
+      return false;
+    }
+    if (subject.trim() === '') {
+      alert('Subject cannot be empty.');
+      return false;
+    }
+    if (message.trim() === '') {
+      alert('Forward message cannot be empty.');
+      return false;
+    }
+    return true; // Allow form submission
+  }
+
+  $(function () {
+    // Summernote
+        $('.summernote').summernote({
+            height: 300,
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                ['fontname', ['fontname']],
+                ['color', ['color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['height', ['height']],
+                ['table', ['table']],
+                ['insert', ['link']],
+                ['view', ['fullscreen', 'codeview', 'help']]
+            ]
+        });
+  })
+
+  function updateTicketStatus(newStatusId) {
+    console.log("Updating ticket status to: ", newStatusId);
+    $.ajax({
+      url: '/member/tickets/{{ ticket.id }}/update_status/', // This URL needs to be defined in urls.py
+      type: 'POST',
+      data: {
+        'status_id': newStatusId,
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(response) {
+        if (response.success) {
+          alert('Ticket status updated successfully!');
+        } else {
+          alert('Error updating ticket status: ' + response.error);
+        }
+      },
+      error: function(xhr, status, error) {
+        alert('AJAX error: ' + error);
+        console.error("AJAX error: ", status, error, xhr);
+      }
+    });
+  }
+
+  function updateTicketPriority(newPriorityId) {
+    console.log("Updating ticket priority to: ", newPriorityId);
+    $.ajax({
+      url: '/member/tickets/{{ ticket.id }}/update_priority/', // This URL needs to be defined in urls.py
+      type: 'POST',
+      data: {
+        'priority_id': newPriorityId,
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(response) {
+        if (response.success) {
+          alert('Ticket priority updated successfully!');
+        } else {
+          alert('Error updating ticket priority: ' + response.error);
+        }
+      },
+      error: function(xhr, status, error) {
+        alert('AJAX error: ' + error);
+        console.error("AJAX error: ", status, error, xhr);
+      }
+    });
+  }
+
+  function updateTicketAgent(newAgentId) {
+    console.log("Updating ticket agent to: ", newAgentId);
+    $.ajax({
+      url: '/member/tickets/{{ ticket.id }}/update_agent/', // This URL needs to be defined in urls.py
+      type: 'POST',
+      data: {
+        'agent_id': newAgentId,
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(response) {
+        if (response.success) {
+          alert('Ticket agent updated successfully!');
+        } else {
+          alert('Error updating ticket agent: ' + response.error);
+        }
+      },
+      error: function(xhr, status, error) {
+        alert('AJAX error: ' + error);
+        console.error("AJAX error: ", status, error, xhr);
+      }
+    });
+  }
+
+  function updateTicketType(newTypeId) {
+    console.log("Updating ticket type to: ", newTypeId);
+    $.ajax({
+      url: '/member/tickets/{{ ticket.id }}/update_type/', // This URL needs to be defined in urls.py
+      type: 'POST',
+      data: {
+        'type_id': newTypeId,
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(response) {
+        if (response.success) {
+          alert('Ticket type updated successfully!');
+        } else {
+          alert('Error updating ticket type: ' + response.error);
+        }
+      },
+      error: function(xhr, status, error) {
+        alert('AJAX error: ' + error);
+        console.error("AJAX error: ", status, error, xhr);
+      }
+    });
+  }
+
+  function updateTicketGroup(newGroupId) {
+    console.log("Updating ticket group to: ", newGroupId);
+    $.ajax({
+      url: '/member/tickets/{{ ticket.id }}/update_group/', // This URL needs to be defined in urls.py
+      type: 'POST',
+      data: {
+        'group_id': newGroupId,
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(response) {
+        if (response.success) {
+          alert('Ticket group updated successfully!');
+        } else {
+          alert('Error updating ticket group: ' + response.error);
+        }
+      },
+      error: function(xhr, status, error) {
+        alert('AJAX error: ' + error);
+        console.error("AJAX error: ", status, error, xhr);
+      }
+    });
+  }
+
+  function updateTicketTeam(newTeamId) {
+    console.log("Updating ticket team to: ", newTeamId);
+    $.ajax({
+      url: '/member/tickets/{{ ticket.id }}/update_team/', // This URL needs to be defined in urls.py
+      type: 'POST',
+      data: {
+        'team_id': newTeamId,
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(response) {
+        if (response.success) {
+          alert('Ticket team updated successfully!');
+        } else {
+          alert('Error updating ticket team: ' + response.error);
+        }
+      },
+      error: function(xhr, status, error) {
+        alert('AJAX error: ' + error);
+        console.error("AJAX error: ", status, error, xhr);
+      }
+    });
+  }
+
+  function updateTicketCountry(newCountryValue) {
+    console.log("Updating ticket country to: ", newCountryValue);
+    $.ajax({
+      url: '/member/tickets/{{ ticket.id }}/update_country/', // This URL needs to be defined in urls.py
+      type: 'POST',
+      data: {
+        'country': newCountryValue,
+        'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+      },
+      success: function(response) {
+        if (response.success) {
+          alert('Ticket country updated successfully!');
+        } else {
+          alert('Error updating ticket country: ' + response.error);
+        }
+      },
+      error: function(xhr, status, error) {
+        alert('AJAX error: ' + error);
+        console.error("AJAX error: ", status, error, xhr);
+      }
+    });
+  }
+</script>
+{% endblock %}

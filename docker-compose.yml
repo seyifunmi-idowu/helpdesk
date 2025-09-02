@@ -21,6 +21,8 @@ services:
       - POSTGRES_DB=uvdesk
       - POSTGRES_USER=uvdesk
       - POSTGRES_PASSWORD=uvdesk
+    ports:
+      - "5432:5432"
 
 volumes:
   postgres_data:
