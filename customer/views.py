@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
 from django.db import models
+from django.db.models import Q
 from authentication.decorators import customer_login_required
 from knowledgebase.models import Folder, SolutionCategory, Article
 from ticket.models import Ticket, TicketType, TicketPriority, TicketStatus
 from authentication.models import User, UserInstance, SupportRole
 from .forms import PublicTicketForm
+from django.contrib import messages
 
 def dashboard(request):
     folders = Folder.objects.all()
@@ -77,7 +78,16 @@ def create_ticket_public(request):
 
 def public_search_results(request):
     query = request.GET.get('q')
-    articles = Article.objects.filter(name__icontains=query) if query else Article.objects.none()
+    articles = Article.objects.none() # Initialize as empty QuerySet
+
+    if query:
+        articles = Article.objects.filter(
+            Q(name__icontains=query) |
+            Q(slug__icontains=query) |
+            Q(content__icontains=query) |
+            Q(keywords__icontains=query)
+        ).distinct()
+
     context = {
         'query': query,
         'articles': articles
@@ -183,11 +193,21 @@ def customer_login(request):
                 messages.error(request, 'Invalid or expired OTP.')
                 return render(request, 'customer/customer_login.html', {'email': email, 'otp_sent': True, 'has_password': user.has_usable_password()})
 
+        elif action == 'show_password_form':
+            # This action is triggered when the user chooses to login with password
+            # after entering their email. It should display the password input form.
+            context = {
+                'email': email,
+                'has_password': user.has_usable_password(),
+                'show_password_form': True # Explicitly show the password form
+            }
+            return render(request, 'customer/customer_login.html', context)
+
         elif action == 'login_with_password':
             user_auth = authenticate(request, username=email, password=password)
             if user_auth is not None:
                 login(request, user_auth)
-                try_login_customer(request, user_auth)
+                return try_login_customer(request, user_auth)
             else:
                 messages.error(request, 'Invalid email or password.')
                 return render(request, 'customer/customer_login.html', {'email': email, 'has_password': user.has_usable_password(), 'show_password_form': True})
@@ -207,6 +227,10 @@ def customer_login(request):
                 EmailManager.send_otp_email(user, otp_code)
                 messages.success(request, 'OTP sent to your email.')
             return render(request, 'customer/customer_login.html', context)
+
+        # Default return for POST requests if action is not recognized
+        messages.error(request, 'Invalid action or missing parameters.')
+        return render(request, 'customer/customer_login.html', {'email': email})
 
     else: # GET request
         return render(request, 'customer/customer_login.html', {})
@@ -327,11 +351,53 @@ def create_ticket_authenticated(request):
     }
     return render(request, 'customer/create_ticket_authenticated.html', context)
 
+from django.contrib.auth import update_session_auth_hash
+from .forms import UserProfileForm, UserInstanceProfileForm, PasswordChangeForm
+
 @customer_login_required
 def customer_profile(request):
-    # Customer profile management
-    # For now, just a placeholder
+    user_instance = None
+    try:
+        user_instance = request.user.user_instances.first()
+    except UserInstance.DoesNotExist:
+        messages.error(request, "User instance not found.")
+        return redirect('authenticated_customer_dashboard') # Or handle as appropriate
+
+    if request.method == 'POST':
+        # Determine which form was submitted
+        if 'profile_submit' in request.POST:
+            user_profile_form = UserProfileForm(request.POST, instance=request.user)
+            user_instance_profile_form = UserInstanceProfileForm(request.POST, request.FILES, instance=user_instance)
+
+            if user_profile_form.is_valid() and user_instance_profile_form.is_valid():
+                user_profile_form.save()
+                user_instance_profile_form.save()
+                messages.success(request, 'Your profile was successfully updated!')
+                return redirect('customer_profile')
+            else:
+                messages.error(request, 'Please correct the errors below.')
+        elif 'password_submit' in request.POST:
+            password_change_form = PasswordChangeForm(data=request.POST)
+            if password_change_form.is_valid():
+                user = password_change_form.save(request.user)
+                update_session_auth_hash(request, user)  # Important!
+                messages.success(request, 'Your password was successfully updated!')
+                return redirect('customer_profile')
+            else:
+                messages.error(request, 'Please correct the errors below.')
+        else:
+            # If neither specific submit button was pressed, initialize forms for GET
+            user_profile_form = UserProfileForm(instance=request.user)
+            user_instance_profile_form = UserInstanceProfileForm(instance=user_instance)
+            password_change_form = PasswordChangeForm()
+    else:
+        user_profile_form = UserProfileForm(instance=request.user)
+        user_instance_profile_form = UserInstanceProfileForm(instance=user_instance)
+        password_change_form = PasswordChangeForm()
+
     context = {
-        'user': request.user
+        'user_profile_form': user_profile_form,
+        'user_instance_profile_form': user_instance_profile_form,
+        'password_change_form': password_change_form,
     }
     return render(request, 'customer/customer_profile.html', context)
