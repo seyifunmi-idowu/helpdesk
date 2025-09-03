@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from settings.models import UvMailbox
 from ticket.models import Ticket, Thread, TicketStatus, TicketPriority, TicketType
+from django.db import models
 from authentication.models import User, UserInstance, SupportRole
 from django.utils import timezone
 import re
@@ -78,7 +79,10 @@ class Command(BaseCommand):
           self.stdout.write(self.style.ERROR(f'Failed to search emails for {mailbox.email}: {status}'))
           continue
 
-        for email_id in email_ids[0].split():
+        email_ids = email_ids[0].split()
+        # latest_email_ids = email_ids[-10:]
+        latest_email_ids = email_ids
+        for email_id in latest_email_ids:
           status, msg_data = mail.fetch(email_id, '(RFC822)')
           if status != 'OK':
             self.stdout.write(self.style.ERROR(f'Failed to fetch email {email_id} for {mailbox.email}: {status}'))
@@ -158,7 +162,7 @@ class Command(BaseCommand):
                   continue
 
               charset = part.get_content_charset() or 'utf-8'
-              
+
               if ctype == 'text/html':
                   try:
                       html_body = part.get_payload(decode=True).decode(charset)
@@ -178,7 +182,7 @@ class Command(BaseCommand):
                   body = msg.get_payload(decode=True).decode(msg.get_content_charset() or 'utf-8')
               except (UnicodeDecodeError, AttributeError):
                   body = msg.get_payload(decode=True).decode('latin-1', errors='ignore')  # Fallback
-          
+
           body = body or ""
 
           self.stdout.write(self.style.SUCCESS(f'Fetched email from {from_email} with subject: {subject}'))
@@ -188,40 +192,87 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'Skipping duplicate email with Message-ID: {message_id}'))
             continue
 
+          # --- Threading Logic for Incoming Emails ---
+          in_reply_to = msg['In-Reply-To'] if 'In-Reply-To' in msg else None
+          references = msg['References'] if 'References' in msg else None
+
+          # Try to find an existing ticket based on In-Reply-To or References
+          existing_ticket = None
+          if in_reply_to:
+              existing_ticket = Ticket.objects.filter(
+                  threads__messageId=in_reply_to
+              ).first()
+
+          if not existing_ticket and references:
+              # Split references into individual message IDs
+              ref_ids = references.split()
+              for ref_id in ref_ids:
+                  existing_ticket = Ticket.objects.filter(
+                      models.Q(threads__messageId=ref_id) | models.Q(reference_ids__contains=ref_id)
+                  ).first()
+                  if existing_ticket:
+                      break # Found a matching ticket
+
           # Get or create UserInstance for the sender
           customer_user_instance = self._get_or_create_user_instance(from_email, from_name)
 
-          # Create Ticket
-          try:
-            new_ticket = Ticket.objects.create(
-              subject=subject,
-              source='email',
-              customer=customer_user_instance,
-              mailboxEmail=mailbox.email,
-              status=default_status,
-              priority=default_priority,
-              type=default_type,
-              createdAt=received_at,  # Use email's received time
-              updatedAt=timezone.now(),
-            )
-            self.stdout.write(self.style.SUCCESS(f'Created new Ticket: {new_ticket.subject} (ID: {new_ticket.id})'))
+          try: # Start of the try block for ticket/thread creation
+              if existing_ticket:
+                  # If ticket found, add new thread to it
+                  current_ticket = existing_ticket
+                  self.stdout.write(self.style.SUCCESS(f'Found existing Ticket ID: {current_ticket.id} for reply.'))
+              else:
+                  # No existing ticket found, create a new one
+                  current_ticket = Ticket.objects.create(
+                      subject=subject,
+                      source='email',
+                      customer=customer_user_instance,
+                      mailboxEmail=mailbox.email,
+                      status=default_status,
+                      priority=default_priority,
+                      type=default_type,
+                      createdAt=received_at,
+                      updatedAt=timezone.now(),
+                      reference_ids=references # Store references for future threading
+                  )
+                  self.stdout.write(self.style.SUCCESS(f'Created new Ticket: {current_ticket.subject} (ID: {current_ticket.id})'))
 
-            # Create Thread for the ticket
-            Thread.objects.create(
-              ticket=new_ticket,
-              user=customer_user_instance,
-              source='email',
-              message=body,
-              threadType='incoming_email',
-              messageId=message_id,
-              createdAt=received_at,  # Use email's received time
-              updatedAt=timezone.now(),
-            )
-            self.stdout.write(self.style.SUCCESS(f'Created new Thread for Ticket ID: {new_ticket.id}'))
+              # Extract and add CC/BCC as collaborators (existing logic, ensure it uses current_ticket)
+              cc_headers = msg.get_all('Cc', [])
+              bcc_headers = msg.get_all('Bcc', [])
+
+              all_cc_bcc_emails = []
+              for header_value in cc_headers + bcc_headers:
+                  for name, addr in email.utils.getaddresses([header_value]):
+                      if addr:
+                          all_cc_bcc_emails.append(addr)
+
+              for cc_bcc_email in all_cc_bcc_emails:
+                  try:
+                      collaborator_user_instance = self._get_or_create_user_instance(cc_bcc_email)
+                      if collaborator_user_instance != customer_user_instance and \
+                         collaborator_user_instance not in current_ticket.collaborators.all():
+                          current_ticket.collaborators.add(collaborator_user_instance)
+                          self.stdout.write(self.style.SUCCESS(f'Added {cc_bcc_email} as collaborator to Ticket ID: {current_ticket.id}'))
+                  except Exception as collab_e:
+                      self.stdout.write(self.style.ERROR(f'Error adding CC/BCC {cc_bcc_email} as collaborator: {collab_e}'))
+
+              # Create Thread for the current_ticket
+              Thread.objects.create(
+                  ticket=current_ticket,
+                  user=customer_user_instance,
+                  source='email',
+                  message=body,
+                  threadType='incoming_email',
+                  messageId=message_id,
+                  createdAt=received_at,
+                  updatedAt=timezone.now(),
+              )
+              self.stdout.write(self.style.SUCCESS(f'Created new Thread for Ticket ID: {current_ticket.id}'))
 
           except Exception as create_e:
-            self.stdout.write(self.style.ERROR(f'Error creating ticket/thread for {from_email}: {create_e}'))
-            # Optionally, mark email as unseen or move to error folder if ticket creation fails
+              self.stdout.write(self.style.ERROR(f'Error creating ticket/thread for {from_email}: {create_e}'))
+              # Optionally, mark email as unseen or move to error folder if ticket creation fails
 
           # Mark email as seen (optional, depending on requirements)
           # mail.store(email_id, '+FLAGS', '\Seen')

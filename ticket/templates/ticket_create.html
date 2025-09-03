@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1>{{ view }}</h1>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+              <li class="breadcrumb-item"><a href="{% url 'ticket_list' %}">Tickets</a></li>
+              <li class="breadcrumb-item active">{{ view }}</li>
+            </ol>
+          </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+        <div class="row">
+          <!-- left column -->
+          <div class="col-md-12">
+            <!-- general form elements -->
+            <div class="card card-primary">
+              <div class="card-header">
+                <h3 class="card-title">Ticket Details</h3>
+              </div>
+              <!-- /.card-header -->
+              <!-- form start -->
+              <form method="post">
+                {% csrf_token %}
+                <div class="card-body">
+                  {% if messages %}
+                      {% for message in messages %}
+                          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                      {% endfor %}
+                  {% endif %}
+
+                  <div class="form-group">
+                    <label for="{{ form.customer_email.id_for_label }}">{{ form.customer_email.label }}</label>
+                    {{ form.customer_email }}
+                    {% if form.customer_email.help_text %}<small class="form-text text-muted">{{ form.customer_email.help_text }}</small>{% endif %}
+                    {% for error in form.customer_email.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                  <div class="form-group">
+                    <label for="{{ form.subject.id_for_label }}">{{ form.subject.label }}</label>
+                    {{ form.subject }}
+                    {% for error in form.subject.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                  <div class="form-group">
+                    <label for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+                    {{ form.status }}
+                    {% for error in form.status.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                  <div class="form-group">
+                    <label for="{{ form.priority.id_for_label }}">{{ form.priority.label }}</label>
+                    {{ form.priority }}
+                    {% for error in form.priority.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                  <div class="form-group">
+                    <label for="{{ form.type.id_for_label }}">{{ form.type.label }}</label>
+                    {{ form.type }}
+                    {% for error in form.type.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                  <div class="form-group">
+                    <label for="{{ form.agent.id_for_label }}">{{ form.agent.label }}</label>
+                    {{ form.agent }}
+                    {% for error in form.agent.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                  <div class="form-group">
+                    <label for="{{ form.supportGroup.id_for_label }}">{{ form.supportGroup.label }}</label>
+                    {{ form.supportGroup }}
+                    {% for error in form.supportGroup.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                  <div class="form-group">
+                    <label for="{{ form.supportTeam.id_for_label }}">{{ form.supportTeam.label }}</label>
+                    {{ form.supportTeam }}
+                    {% for error in form.supportTeam.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                  <div class="form-group">
+                    <label for="{{ form.initial_message.id_for_label }}">{{ form.initial_message.label }}</label>
+                    {{ form.initial_message }}
+                    {% for error in form.initial_message.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                  </div>
+
+                </div>
+                <!-- /.card-body -->
+
+                <div class="card-footer">
+                  <button type="submit" class="btn btn-primary">Create Ticket</button>
+                  <a href="{% url 'ticket_list' %}" class="btn btn-secondary ml-2">Cancel</a>
+                </div>
+              </form>
+            </div>
+            <!-- /.card -->
+          </div>
+          <!--/.col (left) -->
+        </div>
+        <!-- /.row -->
+      </div><!-- /.container-fluid -->
+    </section>
+    <!-- /.content -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(function () {
+    // Summernote
+        $('.summernote').summernote({
+            height: 300,
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'clear']],
+                ['fontname', ['fontname']],
+                ['color', ['color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['height', ['height']],
+                ['table', ['table']],
+                ['insert', ['link']],
+                ['view', ['fullscreen', 'codeview', 'help']]
+            ]
+        });
+  })
+</script>
+{% endblock %}

@@ -69,8 +69,13 @@
                 </div>
                 {% endif %}
                 <div class="card">
-                    <div class="card-header">Ticket List</div>
-                    <div class="card-body">
+                    <div class="card-header">
+                        <h3 class="card-title">Ticket List</h3>
+                        <div class="card-tools">
+                            <a href="{% url 'ticket_create' %}" class="btn btn-primary btn-sm">Create Ticket</a>
+                        </div>
+                    </div>
+                    <div class="card-body" style="overflow-x: auto;">
                         {% if tickets %}
                         <table class="table table-striped">
                             <thead>
@@ -84,7 +89,7 @@
                                 </tr>
                             </thead>
                             <tbody id="ticket-table-body">
-                                {% for ticket in tickets %}
+                                {% for ticket in tickets.object_list %}
                                 <tr>
                                     <td><a href="{% url 'ticket_view' ticket.id %}">{{ ticket.subject }}</a></td>
                                     <td>{{ ticket.customer.user.email }}</td>
@@ -96,6 +101,29 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                        <nav aria-label="Page navigation example">
+                            <ul class="pagination justify-content-center">
+                                {% if tickets.has_previous %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ tickets.previous_page_number }}">Previous</a></li>
+                                {% else %}
+                                    <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                                {% endif %}
+
+                                {% for i in tickets.paginator.page_range %}
+                                    {% if tickets.number == i %}
+                                        <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                                    {% else %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if tickets.has_next %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ tickets.next_page_number }}">Next</a></li>
+                                {% else %}
+                                    <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
                         {% else %}
                         <p>No tickets found.</p>
                         {% endif %}
@@ -117,14 +145,16 @@
         const statusSubfilterBadges = document.querySelectorAll('.status-subfilter');
 
         let currentPrimaryFilter = 'all'; // Default to 'all'
+        let currentPage = 1; // Track current page
 
-        function updateTicketList(primaryFilter, statusCode = null) {
+        function updateTicketList(primaryFilter, statusCode = null, page = 1) {
             let url = '{% url "get_filtered_tickets_and_counts" %}';
             const params = new URLSearchParams();
             params.append('filter_type', primaryFilter);
             if (statusCode) {
                 params.append('status_code', statusCode);
             }
+            params.append('page', page); // Add page parameter
             const customerId = "{{ customer_id }}";
             if (customerId) {
                 params.append('customer_id', customerId);
@@ -169,6 +199,43 @@
                             subfilterElement.nextElementSibling.textContent = data.status_counts[code].count;
                         }
                     }
+
+                    // Update pagination controls
+                    const paginationNav = document.querySelector('.pagination');
+                    paginationNav.innerHTML = ''; // Clear existing pagination
+
+                    if (data.pagination.has_previous) {
+                        paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="#" data-page="${data.pagination.previous_page_number}">Previous</a></li>`);
+                    } else {
+                        paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>`);
+                    }
+
+                    data.pagination.page_range.forEach(pageNum => {
+                        if (pageNum === data.pagination.current_page) {
+                            paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item active"><a class="page-link" href="#">${pageNum}</a></li>`);
+                        } else {
+                            paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="#" data-page="${pageNum}">${pageNum}</a></li>`);
+                        }
+                    });
+
+                    if (data.pagination.has_next) {
+                        paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="#" data-page="${data.pagination.next_page_number}">Next</a></li>`);
+                    } else {
+                        paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item disabled"><a class="page-link" href="#">Next</a></li>`);
+                    }
+
+                    // Add event listeners to new pagination links
+                    paginationNav.querySelectorAll('.page-link').forEach(link => {
+                        if (!link.parentElement.classList.contains('disabled') && !link.parentElement.classList.contains('active')) {
+                            link.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                currentPage = parseInt(this.dataset.page);
+                                updateTicketList(currentPrimaryFilter, null, currentPage); // Pass current filter and new page
+                            });
+                        }
+                    });
+
+                    currentPage = data.pagination.current_page; // Update current page tracker
                 })
                 .catch(error => console.error('Error fetching tickets:', error));
         }
@@ -181,7 +248,7 @@
 
                 const filterType = this.dataset.filterType;
                 currentPrimaryFilter = filterType; // Update current primary filter
-                updateTicketList(currentPrimaryFilter); // Fetch tickets for the selected primary filter
+                updateTicketList(currentPrimaryFilter); // Fetch tickets for the selected primary filter, reset to page 1
 
                 // Remove active class from all sidebar filters
                 sidebarFilters.forEach(f => f.classList.remove('active'));
@@ -195,7 +262,7 @@
             subfilter.addEventListener('click', function(e) {
                 e.preventDefault();
                 const statusCode = this.dataset.statusCode;
-                updateTicketList(currentPrimaryFilter, statusCode); // Fetch tickets for current primary and selected status
+                updateTicketList(currentPrimaryFilter, statusCode); // Fetch tickets for current primary and selected status, reset to page 1
 
                 // Remove active class from all status sub-filters
                 statusSubfilters.forEach(sf => sf.classList.remove('active'));
@@ -205,7 +272,7 @@
         });
 
         // Initial load
-        updateTicketList(currentPrimaryFilter);
+        updateTicketList(currentPrimaryFilter, null, currentPage);
     });
 </script>
 {% endblock %}

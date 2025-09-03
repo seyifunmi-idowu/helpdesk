@@ -1,11 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 import json
 from django.http import JsonResponse
 from django.db import models
 from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse, Ticket, TicketStatus, TicketPriority, Thread
-from .forms import WorkflowForm, TicketTypeForm, TagForm, SavedReplyForm, PreparedResponseForm, ThreadForm, NoteForm, ForwardForm
+from .forms import WorkflowForm, TicketTypeForm, TagForm, SavedReplyForm, PreparedResponseForm, ThreadForm, NoteForm, ForwardForm, CollaboratorForm, TicketForm
+from .services import get_or_create_user_instance
 from authentication.models import User, UserInstance, SupportGroup, SupportTeam
 from .constants import PREPARED_RESPONSE_ACTIONS, EMAIL_TEMPLATES, PRIORITIES, STATUSES
 from authentication.decorators import admin_login_required
@@ -38,6 +40,20 @@ def ticket_list(request):
             customer_id = None
             customer = None
 
+    # Set up Paginator
+    tickets_per_page = 10  # You can adjust this number
+    paginator = Paginator(all_tickets, tickets_per_page)
+
+    page = request.GET.get('page')
+    try:
+        tickets = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page.
+        tickets = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g. 9999), deliver last page of results.
+        tickets = paginator.page(paginator.num_pages)
+
     # Calculate sidebar counts
     all_count = all_tickets.count()
     new_count = all_tickets.filter(is_new=True).count()
@@ -69,7 +85,7 @@ def ticket_list(request):
         "user": request.user,
         "sidebar_filters": sidebar_filters,
         "status_counts": status_counts,
-        "tickets": all_tickets, # For now, display all tickets
+        "tickets": tickets, # Pass the Page object
         "customer": customer,
         "customer_id": customer_id,
     }
@@ -81,7 +97,7 @@ def get_filtered_tickets_and_counts(request):
     status_code = request.GET.get('status_code', None)
     customer_id = request.GET.get('customer_id')
 
-    tickets_queryset = Ticket.objects.all()
+    tickets_queryset = Ticket.objects.all().order_by('-createdAt')
     if customer_id:
         try:
             customer_id = int(customer_id)
@@ -109,6 +125,18 @@ def get_filtered_tickets_and_counts(request):
     # Apply status sub-filter if provided
     if status_code:
         tickets_queryset = tickets_queryset.filter(status__code=status_code)
+
+    # Set up Paginator for the filtered queryset
+    tickets_per_page = 100  # Consistent with ticket_list view
+    paginator = Paginator(tickets_queryset, tickets_per_page)
+
+    page = request.GET.get('page')
+    try:
+        tickets_page_obj = paginator.page(page)
+    except PageNotAnInteger:
+        tickets_page_obj = paginator.page(1)
+    except EmptyPage:
+        tickets_page_obj = paginator.page(paginator.num_pages)
 
     # Recalculate sidebar counts based on the current primary filter (before status filter)
     # This is important because the sidebar counts should reflect the primary category
@@ -155,7 +183,7 @@ def get_filtered_tickets_and_counts(request):
 
     # Serialize tickets
     tickets_data = []
-    for ticket in tickets_queryset:
+    for ticket in tickets_page_obj:
         tickets_data.append({
             'id': ticket.id,
             'subject': ticket.subject,
@@ -170,6 +198,15 @@ def get_filtered_tickets_and_counts(request):
         'tickets': tickets_data,
         'sidebar_filters': sidebar_filters_updated,
         'status_counts': status_counts_updated,
+        'pagination': {
+            'num_pages': tickets_page_obj.paginator.num_pages,
+            'current_page': tickets_page_obj.number,
+            'has_next': tickets_page_obj.has_next(),
+            'has_previous': tickets_page_obj.has_previous(),
+            'next_page_number': tickets_page_obj.next_page_number() if tickets_page_obj.has_next() else None,
+            'previous_page_number': tickets_page_obj.previous_page_number() if tickets_page_obj.has_previous() else None,
+            'page_range': list(tickets_page_obj.paginator.page_range),
+        }
     })
 
 @admin_login_required
@@ -233,6 +270,51 @@ def workflow_delete(request, workflow_id):
     else:
         messages.error(request, "Invalid request method.")
     return redirect('workflow_list')
+
+
+@admin_login_required
+def ticket_create(request):
+    if request.method == 'POST':
+        form = TicketForm(request.POST)
+        if form.is_valid():
+            ticket = form.save(commit=False) # Save ticket instance but don't commit yet
+            
+            # The customer is already set by form.save() in TicketForm's save method
+            # Now save the ticket to the database
+            ticket.save()
+
+            # Create the initial thread for the ticket
+            initial_thread = Thread.objects.create(
+                ticket=ticket,
+                user=ticket.customer, # The customer is the initial sender
+                source='web', # Assuming web creation
+                message=form.cleaned_data['initial_message'],
+                threadType='initial_message', # Custom type for initial message
+                createdBy='agent', # Agent created it
+            )
+            
+            # Send initial ticket email
+            from .email_utils import send_initial_ticket_email
+            try:
+                generated_message_id = send_initial_ticket_email(ticket, initial_thread)
+                initial_thread.messageId = generated_message_id # Save the generated Message-ID
+                initial_thread.save() # Save the thread with the Message-ID
+                messages.success(request, "Ticket created successfully and initial email sent.")
+            except Exception as e:
+                messages.error(request, f"Ticket created, but failed to send initial email: {e}")
+
+            return redirect('ticket_view', ticket_id=ticket.id)
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = TicketForm()
+
+    context = {
+        "view": "Create Ticket",
+        "user": request.user,
+        "form": form
+    }
+    return render(request, "ticket_create.html", context)
 
 
 @admin_login_required
@@ -796,7 +878,15 @@ def ticket_view(request, ticket_id):
                     thread.user = request.user.user_instances.first()
                     thread.threadType = 'reply'
                     thread.createdBy = 'agent'
+
+                    
+
                     thread.save()
+
+                    # Call the email sending utility
+                    from .email_utils import send_reply_email
+                    send_reply_email(ticket, thread, reply_form.cleaned_data.get('send_to_collaborators_cc_bcc'))
+
                     if reply_form.cleaned_data['status']:
                         ticket.status = reply_form.cleaned_data['status']
                         ticket.save()
@@ -840,15 +930,60 @@ def ticket_view(request, ticket_id):
                     if forward_form.cleaned_data['status']:
                         ticket.status = forward_form.cleaned_data['status']
                         ticket.save()
-                    # Here you would add the logic to send the email
-                    messages.success(request, 'Ticket forwarded successfully.')
+                    
+                    # Call the email sending utility for forward
+                    from .email_utils import send_forward_email
+                    try:
+                        send_forward_email(
+                            ticket,
+                            thread, # The newly created thread for the forward
+                            forward_form.cleaned_data['to'],
+                            forward_form.cleaned_data['subject']
+                        )
+                        messages.success(request, 'Ticket forwarded successfully and email sent.')
+                    except Exception as e:
+                        messages.error(request, f'Ticket forwarded, but failed to send email: {e}')
+                    
                     return redirect('ticket_view', ticket_id=ticket.id)
             else:
                 messages.error(request, 'Please correct the errors below.')
+        elif 'collaborator_form' in request.POST:
+            collaborator_form = CollaboratorForm(request.POST)
+            if collaborator_form.is_valid():
+                emails = collaborator_form.cleaned_data['emails']
+                ticket = get_object_or_404(Ticket, id=ticket_id)
+                
+                added_count = 0
+                for email in emails:
+                    user_instance = get_or_create_user_instance(email)
+                    if user_instance not in ticket.collaborators.all():
+                        ticket.collaborators.add(user_instance)
+                        added_count += 1
+                
+                if added_count > 0:
+                    messages.success(request, f'{added_count} collaborator(s) added successfully.')
+                else:
+                    messages.info(request, 'No new collaborators were added.')
+                return redirect('ticket_view', ticket_id=ticket.id)
+            else:
+                messages.error(request, 'Please correct the errors below for collaborators.')
+        elif 'remove_collaborator_id' in request.POST:
+            collaborator_id = request.POST.get('remove_collaborator_id')
+            ticket = get_object_or_404(Ticket, id=ticket_id)
+            try:
+                user_instance_to_remove = UserInstance.objects.get(id=collaborator_id)
+                ticket.collaborators.remove(user_instance_to_remove)
+                messages.success(request, f'Collaborator {user_instance_to_remove.user.email} removed successfully.')
+            except UserInstance.DoesNotExist:
+                messages.error(request, 'Collaborator not found.')
+            except Exception as e:
+                messages.error(request, f'Error removing collaborator: {e}')
+            return redirect('ticket_view', ticket_id=ticket.id)
 
     reply_form = ThreadForm()
     note_form = NoteForm()
     forward_form = ForwardForm()
+    collaborator_form = CollaboratorForm()
 
     statuses = TicketStatus.objects.all()
     priorities = TicketPriority.objects.all()
@@ -865,6 +1000,7 @@ def ticket_view(request, ticket_id):
         'reply_form': reply_form,
         'note_form': note_form,
         'forward_form': forward_form,
+        'collaborator_form': collaborator_form, # Added this line
         'statuses': statuses,
         'priorities': priorities,
         'agents': agents,

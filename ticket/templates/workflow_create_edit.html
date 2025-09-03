@@ -50,15 +50,39 @@
                             {{ form.description }}
                         </div>
                         <div class="form-group">
-                            <label for="id_conditions">Conditions (JSON)</label>
-                            {{ form.conditions }}
-                            <small class="form-text text-muted">Enter valid JSON for workflow conditions.</small>
+                            <label>Events</label>
+                            <p class="text-muted">An event automatically triggers to check conditions and perform a set of pre-defined actions</p>
+                            <div id="events-container">
+                                <!-- Event rows will be added here by JavaScript -->
+                                <button type="button" class="btn btn-info btn-sm" id="add-event-btn">Add Event</button>
+                            </div>
                         </div>
+
                         <div class="form-group">
-                            <label for="id_actions">Actions (JSON)</label>
-                            {{ form.actions }}
-                            <small class="form-text text-muted">Enter valid JSON for workflow actions.</small>
+                            <label>Conditions</label>
+                            <p class="text-muted">Conditions are criteria that must be met for a workflow's actions to be executed.</p>
+                            <div id="conditions-container">
+                                <!-- Condition rows will be added here by JavaScript -->
+                                <button type="button" class="btn btn-info btn-sm" id="add-condition-btn">Add Condition</button>
+                            </div>
                         </div>
+
+                        <div class="form-group">
+                            <label>Actions</label>
+                            <p class="text-muted">Actions are operations performed when a workflow's conditions are met.</p>
+                            <div id="actions-container">
+                                <!-- Action rows will be added here by JavaScript -->
+                                <button type="button" class="btn btn-info btn-sm" id="add-action-btn">Add Action</button>
+                            </div>
+                        </div>
+
+                        <!-- Hidden fields to store JSON data for conditions and actions -->
+                        <input type="hidden" name="conditions" id="id_conditions">
+                        <input type="hidden" name="actions" id="id_actions">
+                        <!-- IMPORTANT: Add a hidden input field for pre-filled events if needed -->
+                        <input type="hidden" name="events_json" id="id_events_json" value="[]">
+                        
+                        
                         <div class="form-group form-check">
                             {{ form.status }} <label class="form-check-label" for="id_status">Active</label>
                         </div>
@@ -74,4 +98,422 @@
         </div>
     </section>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const eventsContainer = document.getElementById('events-container');
+        const addEventBtn = document.getElementById('add-event-btn');
+        const conditionsContainer = document.getElementById('conditions-container');
+        const addConditionBtn = document.getElementById('add-condition-btn');
+        const actionsContainer = document.getElementById('actions-container');
+        const addActionBtn = document.getElementById('add-action-btn');
+        const form = document.querySelector('form');
+
+        let eventCount = 0;
+        let conditionCount = 0;
+        let actionCount = 0;
+
+        // --- Pre-fill Events ---
+        const prefilledEventsJson = document.getElementById('id_events_json');
+        if (prefilledEventsJson && prefilledEventsJson.value) {
+            try {
+                const prefilledEvents = JSON.parse(prefilledEventsJson.value);
+                prefilledEvents.forEach(eventId => {
+                    addEventRow(eventId);
+                });
+            } catch (e) {
+                console.error("Error parsing pre-filled events JSON:", e);
+            }
+        }
+
+        // --- Pre-fill Conditions ---
+        const prefilledConditionsJson = document.getElementById('id_conditions');
+        if (prefilledConditionsJson && prefilledConditionsJson.value) {
+            try {
+                const prefilledConditions = JSON.parse(prefilledConditionsJson.value);
+                prefilledConditions.forEach(condition => {
+                    addConditionRow(condition.type, condition.operator, condition.value);
+                });
+            } catch (e) {
+                console.error("Error parsing pre-filled conditions JSON:", e);
+            }
+        }
+
+        // --- Pre-fill Actions ---
+        const prefilledActionsJson = document.getElementById('id_actions');
+        if (prefilledActionsJson && prefilledActionsJson.value) {
+            try {
+                const prefilledActions = JSON.parse(prefilledActionsJson.value);
+                prefilledActions.forEach(action => {
+                    addActionRow(action.id, action.options);
+                });
+            } catch (e) {
+                console.error("Error parsing pre-filled actions JSON:", e);
+            }
+        }
+
+        // --- Event Handling ---
+        const eventsData = [
+            { id: 'uvdesk.agent.created', description: 'Agent Created', applicable_to: ['general'] },
+            { id: 'uvdesk.agent.removed', description: 'Agent Deleted', applicable_to: ['general'] },
+            { id: 'uvdesk.user.forgot_password', description: 'User Forgot Password', applicable_to: ['general'] },
+            { id: 'uvdesk.agent.update', description: 'Agent Update', applicable_to: ['general'] },
+            { id: 'uvdesk.customer.created', description: 'Customer Created', applicable_to: ['general'] },
+            { id: 'uvdesk.customer.removed', description: 'Customer Deleted', applicable_to: ['general'] },
+            { id: 'uvdesk.customer.updated', description: 'Customer Update', applicable_to: ['general'] },
+            { id: 'uvdesk.ticket.agent_updated', description: 'Agent Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.agent_reply', description: 'Agent Reply', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.collaborator_updated', description: 'Collaborator Added', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.collaborator_reply', description: 'Collaborator Reply', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.created', description: 'Ticket Created', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.customer_reply', description: 'Customer Reply', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.removed', description: 'Ticket Deleted', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.group_updated', description: 'Group Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.note_added', description: 'Note Added', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.priority_updated', description: 'Priority Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.status_updated', description: 'Status Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.team_updated', description: 'Team Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.thread_updated', description: 'Thread Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.type_updated', description: 'Type Updated', applicable_to: ['ticket'] },
+        ];
+
+        function addEventRow(eventId = null) {
+            eventCount++;
+            const eventRow = document.createElement('div');
+            eventRow.classList.add('form-row', 'mb-2', 'event-row');
+            eventRow.innerHTML = `
+                <div class="col">
+                    <select class="form-control event-select" name="event_${eventCount}">
+                        ${eventsData.map(event => `<option value="${event.id}">${event.description}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-danger btn-sm remove-row">Remove</button>
+                </div>
+            `;
+            eventsContainer.insertBefore(eventRow, addEventBtn);
+            if (eventId) {
+                eventRow.querySelector('.event-select').value = eventId;
+            }
+            updateConditionDropdowns(); // Update conditions when a new event is added or pre-filled
+        }
+
+        addEventBtn.addEventListener('click', function() {
+            addEventRow();
+        });
+        const eventsData = [
+            { id: 'uvdesk.agent.created', description: 'Agent Created', applicable_to: ['general'] },
+            { id: 'uvdesk.agent.removed', description: 'Agent Deleted', applicable_to: ['general'] },
+            { id: 'uvdesk.user.forgot_password', description: 'User Forgot Password', applicable_to: ['general'] },
+            { id: 'uvdesk.agent.update', description: 'Agent Update', applicable_to: ['general'] },
+            { id: 'uvdesk.customer.created', description: 'Customer Created', applicable_to: ['general'] },
+            { id: 'uvdesk.customer.removed', description: 'Customer Deleted', applicable_to: ['general'] },
+            { id: 'uvdesk.customer.updated', description: 'Customer Update', applicable_to: ['general'] },
+            { id: 'uvdesk.ticket.agent_updated', description: 'Agent Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.agent_reply', description: 'Agent Reply', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.collaborator_updated', description: 'Collaborator Added', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.collaborator_reply', description: 'Collaborator Reply', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.created', description: 'Ticket Created', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.customer_reply', description: 'Customer Reply', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.removed', description: 'Ticket Deleted', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.group_updated', description: 'Group Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.note_added', description: 'Note Added', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.priority_updated', description: 'Priority Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.status_updated', description: 'Status Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.team_updated', description: 'Team Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.thread_updated', description: 'Thread Updated', applicable_to: ['ticket'] },
+            { id: 'uvdesk.ticket.type_updated', description: 'Type Updated', applicable_to: ['ticket'] },
+        ];
+
+        function addEventRow(eventId = null) {
+            eventCount++;
+            const eventRow = document.createElement('div');
+            eventRow.classList.add('form-row', 'mb-2', 'event-row');
+            eventRow.innerHTML = `
+                <div class="col">
+                    <select class="form-control event-select" name="event_${eventCount}">
+                        ${eventsData.map(event => `<option value="${event.id}">${event.description}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-danger btn-sm remove-row">Remove</button>
+                </div>
+            `;
+            eventsContainer.insertBefore(eventRow, addEventBtn);
+            if (eventId) {
+                eventRow.querySelector('.event-select').value = eventId;
+            }
+            updateConditionDropdowns(); // Update conditions when a new event is added or pre-filled
+        }
+
+        addEventBtn.addEventListener('click', function() {
+            addEventRow();
+        });
+
+        // --- Condition Handling ---
+        const conditionTypes = [
+            { id: 'from_mail', description: 'From Mail', applicable_to: ['ticket', 'email_activity', 'general'] },
+            { id: 'to_mail', description: 'To Mail', applicable_to: ['ticket', 'email_activity', 'general'] },
+            { id: 'subject', description: 'Subject', applicable_to: ['ticket', 'task', 'general'] },
+            { id: 'description', description: 'Description', applicable_to: ['ticket', 'general'] },
+            { id: 'subject_or_description', description: 'Subject or Description', applicable_to: ['ticket', 'general'] },
+            { id: 'created', description: 'Created', applicable_to: ['ticket', 'task', 'general'] },
+            { id: 'custom_fields', description: 'Custom Fields', applicable_to: ['ticket', 'general'] },
+            { id: 'ticket_priority', description: 'Ticket Priority', applicable_to: ['ticket'] },
+            { id: 'ticket_type', description: 'Ticket Type', applicable_to: ['ticket'] },
+            { id: 'ticket_status', description: 'Ticket Status', applicable_to: ['ticket'] },
+            { id: 'source', description: 'Source', applicable_to: ['ticket'] },
+            { id: 'agent', description: 'Agent', applicable_to: ['ticket'] },
+            { id: 'group', description: 'Group', applicable_to: ['ticket'] },
+            { id: 'team', description: 'Team', applicable_to: ['ticket'] },
+            { id: 'customer_name', description: 'Customer Name', applicable_to: ['ticket'] },
+            { id: 'customer_email', description: 'Customer Email', applicable_to: ['ticket'] },
+            { id: 'stage', description: 'Stage', applicable_to: ['task'] },
+        ];
+
+        const operators = [
+            { id: 'is', description: 'is' },
+            { id: 'isNot', description: 'isNot' },
+            { id: 'contains', description: 'contains' },
+            { id: 'notContains', description: 'notContains' },
+            { id: 'startWith', description: 'startWith' },
+            { id: 'endWith', description: 'endWith' },
+            { id: 'before', description: 'before' },
+            { id: 'beforeOn', description: 'beforeOn' },
+            { id: 'after', description: 'after' },
+            { id: 'afterOn', description: 'afterOn' },
+            { id: 'beforeDateTime', description: 'beforeDateTime' },
+            { id: 'beforeDateTimeOn', description: 'beforeDateTimeOn' },
+            { id: 'afterDateTime', description: 'afterDateTime' },
+            { id: 'afterDateTimeOn', description: 'afterDateTimeOn' },
+            { id: 'beforeTime', description: 'beforeTime' },
+            { id: 'beforeTimeOn', description: 'beforeTimeOn' },
+            { id: 'afterTime', description: 'afterTime' },
+            { id: 'afterTimeOn', description: 'afterTimeOn' },
+            { id: 'greaterThan', description: 'greaterThan' },
+            { id: 'lessThan', description: 'lessThan' },
+        ];
+
+        // Function to get applicable condition types based on selected events
+        function getApplicableConditionTypes() {
+            const selectedEventCategories = new Set();
+            document.querySelectorAll('.event-select').forEach(select => {
+                const selectedEventId = select.value;
+                const event = eventsData.find(e => e.id === selectedEventId);
+                if (event && event.applicable_to) {
+                    event.applicable_to.forEach(cat => selectedEventCategories.add(cat));
+                }
+            });
+
+            if (selectedEventCategories.size === 0) {
+                return conditionTypes; // If no events selected, show all conditions
+            }
+
+            return conditionTypes.filter(condition => {
+                return condition.applicable_to.some(cat => selectedEventCategories.has(cat));
+            });
+        }
+
+        // Function to update all condition dropdowns
+        function updateConditionDropdowns() {
+            const applicableConditions = getApplicableConditionTypes();
+            const optionsHtml = applicableConditions.map(type => `<option value="${type.id}">${type.description}</option>`).join('');
+
+            document.querySelectorAll('.condition-type-select').forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = optionsHtml;
+                // Try to restore the previously selected value if it's still applicable
+                if (applicableConditions.some(cond => cond.id === currentValue)) {
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        function addConditionRow(type = null, operator = null, value = null) {
+            conditionCount++;
+            const conditionRow = document.createElement('div');
+            conditionRow.classList.add('form-row', 'mb-2', 'condition-row');
+            const applicableConditions = getApplicableConditionTypes();
+            const optionsHtml = applicableConditions.map(condType => `<option value="${condType.id}">${condType.description}</option>`).join('');
+
+            conditionRow.innerHTML = `
+                <div class="col-4">
+                    <select class="form-control condition-type-select" name="condition_type_${conditionCount}">
+                        ${optionsHtml}
+                    </select>
+                </div>
+                <div class="col-3">
+                    <select class="form-control operator-select" name="operator_${conditionCount}">
+                        ${operators.map(op => `<option value="${op.id}">${op.description}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-4">
+                    <input type="text" class="form-control condition-value" name="condition_value_${conditionCount}" placeholder="Value">
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-danger btn-sm remove-row">Remove</button>
+                </div>
+            `;
+            conditionsContainer.insertBefore(conditionRow, addConditionBtn);
+
+            if (type) {
+                conditionRow.querySelector('.condition-type-select').value = type;
+            }
+            if (operator) {
+                conditionRow.querySelector('.operator-select').value = operator;
+            }
+            if (value) {
+                conditionRow.querySelector('.condition-value').value = value;
+            }
+        }
+
+        addConditionBtn.addEventListener('click', function() {
+            addConditionRow();
+        });
+
+        // Listen for changes on any event select dropdown
+        eventsContainer.addEventListener('change', function(event) {
+            if (event.target.classList.contains('event-select')) {
+                updateConditionDropdowns();
+            }
+        });
+
+        // Initial update of condition dropdowns (in case of pre-filled events)
+        updateConditionDropdowns();
+
+        // --- Action Handling ---
+        const actionTypes = [
+            { id: 'uvdesk.agent.mail_agent', description: 'Mail to agent (Agent Group)', options: [{ type: 'select', name: 'email_template', label: 'Email Template', data: ['Template 1', 'Template 2'] }] },
+            { id: 'uvdesk.agent.transfer_tickets', description: 'Transfer Tickets', options: [{ type: 'select', name: 'agent', label: 'Agent', data: ['Agent 1', 'Agent 2'] }] },
+            { id: 'uvdesk.customer.mail_customer', description: 'Mail to customer (Customer Group)', options: [{ type: 'select', name: 'email_template', label: 'Email Template', data: ['Template 1', 'Template 2'] }] },
+            { id: 'uvdesk.agent.add_note', description: 'Add Note', options: [{ type: 'textarea', name: 'note_content', label: 'Note Content' }] },
+            { id: 'uvdesk.ticket.mail_agent', description: 'Mail to agent (Ticket Group)', options: [{ type: 'select', name: 'email_template', label: 'Email Template', data: ['Template 1', 'Template 2'] }, { type: 'select', name: 'agents', label: 'Agents', data: ['Agent 1', 'Agent 2'], multiple: true }] },
+            { id: 'uvdesk.ticket.mail_customer', description: 'Mail to customer (Ticket Group)', options: [{ type: 'select', name: 'email_template', label: 'Email Template', data: ['Template 1', 'Template 2'] }] },
+            { id: 'uvdesk.ticket.mail_group', description: 'Mail to group', options: [{ type: 'select', name: 'email_template', label: 'Email Template', data: ['Template 1', 'Template 2'] }, { type: 'select', name: 'groups', label: 'Support Groups', data: ['Group 1', 'Group 2'], multiple: true }] },
+            { id: 'uvdesk.ticket.mail_last_collaborator', description: 'Mail to last collaborator', options: [{ type: 'select', name: 'email_template', label: 'Email Template', data: ['Template 1', 'Template 2'] }] },
+            { id: 'uvdesk.ticket.mail_team', description: 'Mail to team', options: [{ type: 'select', name: 'email_template', label: 'Email Template', data: ['Template 1', 'Template 2'] }, { type: 'select', name: 'teams', label: 'Support Teams', data: ['Team 1', 'Team 2'], multiple: true }] },
+            { id: 'uvdesk.ticket.mark_spam', description: 'Mark Spam', options: [] },
+            { id: 'uvdesk.ticket.round_robin_ticket_assignment', description: 'Round robin ticket assignment', options: [] },
+            { id: 'uvdesk.ticket.assign_agent', description: 'Assign to agent', options: [{ type: 'select', name: 'agent', label: 'Agent', data: ['Agent 1', 'Agent 2'] }] },
+            { id: 'uvdesk.ticket.assign_group', description: 'Assign to group', options: [{ type: 'select', name: 'group', label: 'Support Group', data: ['Group 1', 'Group 2'] }] },
+            { id: 'uvdesk.ticket.update_label', description: 'Set Label As', options: [{ type: 'select', name: 'label', label: 'Label', data: ['Label 1', 'Label 2'] }] },
+            { id: 'uvdesk.ticket.update_priority', description: 'Set Priority As', options: [{ type: 'select', name: 'priority', label: 'Ticket Priority', data: ['Low', 'Medium', 'High'] }] },
+            { id: 'uvdesk.ticket.update_status', description: 'Set Status As', options: [{ type: 'select', name: 'status', label: 'Ticket Status', data: ['Open', 'Pending', 'Closed'] }] },
+            { id: 'uvdesk.ticket.update_tag', description: 'Set Tag As', options: [{ type: 'select', name: 'tag', label: 'Tag', data: ['Tag 1', 'Tag 2'] }] },
+            { id: 'uvdesk.ticket.assign_team', description: 'Assign to team', options: [{ type: 'select', name: 'team', label: 'Support Team', data: ['Team 1', 'Team 2'] }] },
+            { id: 'uvdesk.ticket.update_type', description: 'Set Type As', options: [{ type: 'select', name: 'type', label: 'Ticket Type', data: ['Type 1', 'Type 2'] }] },
+            { id: 'uvdesk.user.mail_user', description: 'Mail to User (User Group)', options: [{ type: 'select', name: 'email_template', label: 'Email Template', data: ['Template 1', 'Template 2'] }] },
+        ];
+
+        function renderActionOptions(actionRow, selectedActionId, prefilledOptions = {}) {
+            const action = actionTypes.find(a => a.id === selectedActionId);
+            const optionsContainer = actionRow.querySelector('.action-options-container');
+            optionsContainer.innerHTML = ''; // Clear previous options
+
+            if (action && action.options && action.options.length > 0) {
+                action.options.forEach(option => {
+                    let inputHtml = '';
+                    const optionValue = prefilledOptions[option.name] || '';
+
+                    if (option.type === 'select') {
+                        const multipleAttr = option.multiple ? 'multiple' : '';
+                        inputHtml = `
+                            <select class="form-control" name="${option.name}" ${multipleAttr}>
+                                ${option.data.map(item => `<option value="${item}" ${Array.isArray(optionValue) && optionValue.includes(item) ? 'selected' : (item === optionValue ? 'selected' : '')}>${item}</option>`).join('')}
+                            </select>
+                        `;
+                    } else if (option.type === 'textarea') {
+                        inputHtml = `<textarea class="form-control" name="${option.name}" placeholder="${option.label}">${optionValue}</textarea>`;
+                    } else {
+                        inputHtml = `<input type="text" class="form-control" name="${option.name}" placeholder="${option.label}" value="${optionValue}">`;
+                    }
+                    optionsContainer.innerHTML += `
+                        <div class="form-group mt-2">
+                            <label>${option.label}</label>
+                            ${inputHtml}
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function addActionRow(actionId = null, prefilledOptions = {}) {
+            actionCount++;
+            const actionRow = document.createElement('div');
+            actionRow.classList.add('form-row', 'mb-2', 'action-row');
+            actionRow.innerHTML = `
+                <div class="col-4">
+                    <select class="form-control action-select" name="action_${actionCount}">
+                        ${actionTypes.map(action => `<option value="${action.id}">${action.description}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-7">
+                    <div class="action-options-container"></div>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-danger btn-sm remove-row">Remove</button>
+                </div>
+            `;
+            actionsContainer.insertBefore(actionRow, addActionBtn);
+
+            const newActionSelect = actionRow.querySelector('.action-select');
+            if (actionId) {
+                newActionSelect.value = actionId;
+            }
+            renderActionOptions(actionRow, newActionSelect.value, prefilledOptions);
+        }
+
+        addActionBtn.addEventListener('click', function() {
+            addActionRow();
+        });
+
+        // Listen for changes on any action select dropdown
+        actionsContainer.addEventListener('change', function(event) {
+            if (event.target.classList.contains('action-select')) {
+                const actionRow = event.target.closest('.action-row');
+                renderActionOptions(actionRow, event.target.value);
+            }
+        });
+
+        // --- General Row Removal ---
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('remove-row')) {
+                event.target.closest('.form-row').remove();
+            }
+        });
+
+        // --- Form Submission: Construct JSON ---
+        form.addEventListener('submit', function(event) {
+            // event.preventDefault(); // Prevent default form submission for testing JSON output
+
+            const conditions = [];
+            document.querySelectorAll('.condition-row').forEach(row => {
+                const type = row.querySelector('.condition-type-select').value;
+                const operator = row.querySelector('.operator-select').value;
+                const value = row.querySelector('.condition-value').value;
+                conditions.push({ type, operator, value });
+            });
+            document.getElementById('id_conditions').value = JSON.stringify(conditions);
+
+            const actions = [];
+            document.querySelectorAll('.action-row').forEach(row => {
+                const id = row.querySelector('.action-select').value;
+                const options = {};
+                row.querySelectorAll('.action-options-container select, .action-options-container textarea, .action-options-container input').forEach(input => {
+                    if (input.type === 'select-multiple') {
+                        options[input.name] = Array.from(input.selectedOptions).map(option => option.value);
+                    } else {
+                        options[input.name] = input.value;
+                    }
+                });
+                actions.push({ id, options });
+            });
+            document.getElementById('id_actions').value = JSON.stringify(actions);
+
+            // console.log('Conditions JSON:', document.getElementById('id_conditions').value);
+            // console.log('Actions JSON:', document.getElementById('id_actions').value);
+            // If you uncomment event.preventDefault(), you can inspect the console output.
+        });
+    });
+</script>
 {% endblock %}

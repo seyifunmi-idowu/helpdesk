@@ -14,6 +14,7 @@ urlpatterns = [
     path('workflows/create/', views.workflow_create, name='workflow_create'),
     path('workflows/<int:workflow_id>/edit/', views.workflow_edit, name='workflow_edit'),
     path('workflows/<int:workflow_id>/delete/', views.workflow_delete, name='workflow_delete'),
+    path('tickets/create/', views.ticket_create, name='ticket_create'),
 
     # Ticket Types
     path('ticket-types/', views.ticket_type_list, name='ticket_type_list'),

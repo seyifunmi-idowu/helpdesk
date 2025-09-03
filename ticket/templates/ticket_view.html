@@ -232,6 +232,7 @@
                   <li class="nav-item"><a class="nav-link active" href="#reply" data-toggle="tab">Reply</a></li>
                   <li class="nav-item"><a class="nav-link" href="#forward" data-toggle="tab">Forward</a></li>
                   <li class="nav-item"><a class="nav-link" href="#note" data-toggle="tab">Note</a></li>
+                  <li class="nav-item"><a class="nav-link" href="#collaborators" data-toggle="tab">Collaborators</a></li>
                 </ul>
               </div><!-- /.card-header -->
               <div class="card-body">
@@ -241,6 +242,26 @@
                         {% csrf_token %}
                         <input type="hidden" name="reply_form">
                         <input type="hidden" name="status" id="reply-status">
+                        <h5>Collaborators:</h5>
+                        {% if ticket.collaborators.all %}
+                            <ul class="list-group list-group-flush mb-3">
+                                {% for collaborator in ticket.collaborators.all %}
+                                    <li class="list-group-item py-1 px-2">{{ collaborator.user.email }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted">No collaborators on this ticket.</p>
+                        {% endif %}
+                        <div class="form-group row">
+                            <div class="col-sm-12">
+                                <div class="form-check">
+                                    {{ reply_form.send_to_collaborators_cc_bcc }}
+                                    <label class="form-check-label" for="{{ reply_form.send_to_collaborators_cc_bcc.id_for_label }}">
+                                        {{ reply_form.send_to_collaborators_cc_bcc.label }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-group row">
                             <div class="col-sm-12">
                                 {{ reply_form.message }}
@@ -320,6 +341,45 @@
                             </div>
                         </div>
                     </form>
+                  </div>
+                  <!-- /.tab-pane -->
+
+                  <div class="tab-pane" id="collaborators">
+                    <form class="form-horizontal" method="post" id="collaborator-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="collaborator_form">
+                        <div class="form-group row">
+                            <label for="id_emails" class="col-sm-12 col-form-label">Add Collaborators</label>
+                            <div class="col-sm-12">
+                                {{ collaborator_form.emails }}
+                                {% if collaborator_form.emails.help_text %}<small class="form-text text-muted">{{ collaborator_form.emails.help_text }}</small>{% endif %}
+                                {% for error in collaborator_form.emails.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-sm-12">
+                                <button type="submit" class="btn btn-primary">Add Collaborators</button>
+                            </div>
+                        </div>
+                    </form>
+                    <hr>
+                    <h5>Current Collaborators:</h5>
+                    {% if ticket.collaborators.all %}
+                        <ul class="list-group list-group-flush">
+                            {% for collaborator in ticket.collaborators.all %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ collaborator.user.email }}
+                                    <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to remove this collaborator?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="remove_collaborator_id" value="{{ collaborator.id }}">
+                                        <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                    </form>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No collaborators added yet.</p>
+                    {% endif %}
                   </div>
                   <!-- /.tab-pane -->
                 </div>
