@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ view_title }} Swift Mailer Configuration{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>{{ view_title }} Swift Mailer Configuration</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'uv_swiftmailer_list' %}">Swift Mailer Configurations</a></li>
+                        <li class="breadcrumb-item active">{{ view_title }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ view_title }}</h3>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_name">Name</label>
+                                {{ form.name }}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_transport">Transport Type</label>
+                                {{ form.transport }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_host">Server</label>
+                                {{ form.host }}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_port">Port</label>
+                                {{ form.port }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_encryption">Encryption Mode</label>
+                                {{ form.encryption }}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_username">Email</label>
+                                {{ form.username }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_password">Password</label>
+                                <div class="input-group">
+                                    {{ form.password }}
+                                    <div class="input-group-append">
+                                        <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                            <i class="fas fa-eye"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_sender_address">Sender Address</label>
+                                {{ form.sender_address }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a href="{% url 'uv_swiftmailer_list' %}" class="btn btn-secondary ml-2">Cancel</a>
+                        <button type="button" class="btn btn-info ml-2" id="testConnectionBtn">Test Connection</button>
+                    </div>
+                </form>
+                <div id="testConnectionResult" class="p-3"></div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Password toggle functionality
+    $('.toggle-password').on('click', function() {
+        var passwordField = $(this).closest('.input-group').find('input');
+        var passwordFieldType = passwordField.attr('type');
+        if (passwordFieldType == 'password') {
+            passwordField.attr('type', 'text');
+            $(this).find('i').removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            passwordField.attr('type', 'password');
+            $(this).find('i').removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+    $('#testConnectionBtn').on('click', function() {
+        var formData = {
+            'host': $('#id_host').val(),
+            'port': $('#id_port').val(),
+            'username': $('#id_username').val(),
+            'password': $('#id_password').val(),
+            'encryption': $('#id_encryption').val(),
+            'transport': $('#id_transport').val(),
+            'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+        };
+
+        $.ajax({
+            url: "{% url 'test_swiftmailer_connection' %}",
+            type: 'POST',
+            data: formData,
+            dataType: 'json',
+            beforeSend: function() {
+                $('#testConnectionResult').html('<div class="alert alert-info">Testing connection...</div>');
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#testConnectionResult').html('<div class="alert alert-success">' + response.message + '</div>');
+                } else {
+                    $('#testConnectionResult').html('<div class="alert alert-danger">' + response.message + '</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#testConnectionResult').html('<div class="alert alert-danger">An error occurred during the test. Please check console for details.</div>');
+                console.error(xhr.responseText);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

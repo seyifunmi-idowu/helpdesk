@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Swift Mailer Configurations{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>Swift Mailer Configurations</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                        <li class="breadcrumb-item active">Swift Mailer Configurations</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">All Swift Mailer Configurations</h3>
+                            <div class="card-tools">
+                                <a href="{% url 'uv_swiftmailer_create' %}" class="btn btn-primary btn-sm">Create New Configuration</a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <table class="table table-hover text-nowrap">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Transport</th>
+                                        <th>Host</th>
+                                        <th>Port</th>
+                                        <th>Encryption</th>
+                                        <th>Sender Address</th>
+                                        <th style="width: 20%">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for swiftmailer in swiftmailers %}
+                                    <tr>
+                                        <td>{{ swiftmailer.name }}</td>
+                                        <td>{{ swiftmailer.get_transport_display }}</td>
+                                        <td>{{ swiftmailer.host|default:"-" }}</td>
+                                        <td>{{ swiftmailer.port|default:"-" }}</td>
+                                        <td>{{ swiftmailer.get_encryption_display }}</td>
+                                        <td>{{ swiftmailer.sender_address }}</td>
+                                        <td class="project-actions text-right">
+                                            <a class="btn btn-info btn-sm" href="{% url 'uv_swiftmailer_edit' swiftmailer.pk %}">
+                                                <i class="fas fa-pencil-alt"></i> Edit
+                                            </a>
+                                            <button type="button" class="btn btn-danger btn-sm delete-btn" data-url="{% url 'uv_swiftmailer_delete' swiftmailer.pk %}">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">No Swift Mailer configurations found.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle delete button click
+    $('.delete-btn').on('click', function(e) {
+        e.preventDefault();
+        var deleteUrl = $(this).data('url');
+        $('#confirmActionForm').attr('action', deleteUrl);
+        $('#confirmActionModal').modal('show');
+    });
+});
+</script>
+{% endblock %}

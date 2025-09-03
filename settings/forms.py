@@ -1,12 +1,28 @@
 from django import forms
-from .models import EmailTemplate
+from .models import UvSwiftmailer, UvMailbox, UvEmailSettings, EmailTemplate
+
+class UvSwiftmailerForm(forms.ModelForm):
+    class Meta:
+        model = UvSwiftmailer
+        fields = '__all__'
+        widgets = {
+            'password': forms.PasswordInput(render_value=True),
+        }
+
+class UvMailboxForm(forms.ModelForm):
+    class Meta:
+        model = UvMailbox
+        fields = '__all__'
+        widgets = {
+            'imap_password': forms.PasswordInput(render_value=True),
+        }
+
+class UvEmailSettingsForm(forms.ModelForm):
+    class Meta:
+        model = UvEmailSettings
+        fields = '__all__'
 
 class EmailTemplateForm(forms.ModelForm):
     class Meta:
         model = EmailTemplate
-        fields = ['name', 'subject', 'body', 'is_active']
-        widgets = {
-            'name': forms.TextInput(attrs={'style': 'width: 100%;'}),
-            'subject': forms.TextInput(attrs={'style': 'width: 100%;'}),
-            'body': forms.Textarea(attrs={'class': 'summernote'}),
-        }
+        fields = '__all__'

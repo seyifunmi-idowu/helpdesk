@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if meta_description %}
+    <meta name="description" content="{{ meta_description }}">
+    {% endif %}
+    {% if meta_keywords %}
+    <meta name="keywords" content="{{ meta_keywords }}">
+    {% endif %}
     <title>{% block title %}Customer Portal{% endblock %}</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,15 +19,16 @@
 
     <style>
         :root {
-            --primary-color: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary-color: #64748b;
+            --primary-color: #0c1e35; /* Dark Navy Blue */
+            --primary-dark: #0c1e35;
+            --secondary-color: #868a90; /* Medium Gray */
+            --accent-color: #d3ac4d; /* Gold */
             --success-color: #059669;
             --background-light: #f8fafc;
             --background-white: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
+            --text-primary: #0c1e35; /* Dark Navy Blue */
+            --text-secondary: #575447; /* Dark Gray/Olive Tint */
+            --border-color: #cacdd2; /* Light Gray */
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -39,19 +46,40 @@
             padding-top: 76px;
         }
 
+        .broadcast-banner {
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+            padding: 0.75rem 1.25rem;
+            text-align: center;
+            font-weight: 500;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1031; /* Above navbar */
+        }
+
+        body.has-banner {
+            padding-top: calc(76px + 45px); /* Adjust padding-top when banner is present */
+        }
+
+
         /* Enhanced Navbar */
         .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
-            backdrop-filter: blur(10px);
+            background: var(--primary-color) !important;
             box-shadow: var(--shadow-lg);
             padding: 1rem 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            top: 0; /* Default top */
+        }
+
+        body.has-banner .navbar {
+            top: 45px; /* Push navbar down when banner is present */
         }
 
         .navbar-brand {
             font-weight: 700;
             font-size: 1.5rem;
-            color: white !important;
+            color: var(--accent-color) !important; /* Gold text */
             text-decoration: none;
         }
 
@@ -66,13 +94,16 @@
 
         .navbar-nav .nav-link:hover {
             color: white !important;
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(211, 172, 77, 0.1); /* Faint gold on hover */
             transform: translateY(-1px);
         }
 
         .navbar-toggler {
             border: none;
             padding: 0.25rem 0.5rem;
+        }
+         .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255, 255, 255, 0.8)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
         }
 
         .navbar-toggler:focus {
@@ -87,7 +118,7 @@
 
         /* Enhanced Footer */
         .footer {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            background: var(--primary-color);
             color: white;
             padding: 2rem 0;
             margin-top: auto;
@@ -120,13 +151,17 @@
         }
 
         .footer-links a:hover {
-            color: white;
+            color: var(--accent-color);
         }
 
         /* Responsive Design */
         @media (max-width: 768px) {
             body {
                 padding-top: 70px;
+            }
+
+            body.has-banner {
+                padding-top: calc(70px + 45px);
             }
 
             .footer .container {
@@ -158,45 +193,68 @@
             background: var(--primary-color);
         }
     </style>
+    {% if custom_css %}
+    <style>
+        {{ custom_css|safe }}
+    </style>
+    {% endif %}
 </head>
 <body>
+    {% if broadcast_message %}
+    <div class="broadcast-banner">
+        {{ broadcast_message }}
+    </div>
+    <script>
+        document.body.classList.add('has-banner');
+    </script>
+    {% endif %}
     <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container">
             <a class="navbar-brand" href="{% url 'customer_dashboard' %}">
-                <i class="fas fa-shield-alt me-2"></i>Customer Portal
+                {% if website_logo %}
+                <img src="{{ website_logo }}" alt="{{ website_name }}" style="height: 30px; margin-right: 10px;">
+                {% else %}
+                <i class="fas fa-shield-alt me-2"></i>
+                {% endif %}
+                {{ website_name }}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    {% for link in header_links %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% if user.is_authenticated %}{% url 'authenticated_customer_dashboard' %}{% else %}{% url 'customer_dashboard' %}{% endif %}">
-                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                        </a>
+                        <a class="nav-link" href="{{ link.url }}">{{ link.title }}</a>
                     </li>
-                    {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'customer_ticket_list' %}">
-                            <i class="fas fa-ticket-alt me-1"></i>My Tickets
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'customer_profile' %}">
-                            <i class="fas fa-user me-1"></i>Profile
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'customer_logout' %}">
-                            <i class="fas fa-sign-out-alt me-1"></i>Logout
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'customer_login' %}">
-                            <i class="fas fa-sign-in-alt me-1"></i>Login
-                        </a>
-                    </li>
+                    {% endfor %}
+<!--                    <li class="nav-item">-->
+<!--                        <a class="nav-link" href="{% if user.is_authenticated %}{% url 'authenticated_customer_dashboard' %}{% else %}{% url 'customer_dashboard' %}{% endif %}">-->
+<!--                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard-->
+<!--                        </a>-->
+<!--                    </li>-->
+<!--                    {% if user.is_authenticated %}-->
+<!--                    <li class="nav-item">-->
+<!--                        <a class="nav-link" href="{% url 'customer_ticket_list' %}">-->
+<!--                            <i class="fas fa-ticket-alt me-1"></i>My Tickets-->
+<!--                        </a>-->
+<!--                    </li>-->
+<!--                    <li class="nav-item">-->
+<!--                        <a class="nav-link" href="{% url 'customer_profile' %}">-->
+<!--                            <i class="fas fa-user me-1"></i>Profile-->
+<!--                        </a>-->
+<!--                    </li>-->
+<!--                    <li class="nav-item">-->
+<!--                        <a class="nav-link" href="{% url 'customer_logout' %}">-->
+<!--                            <i class="fas fa-sign-out-alt me-1"></i>Logout-->
+<!--                        </a>-->
+<!--                    </li>-->
+<!--                    {% else %}-->
+<!--                     <li class="nav-item">-->
+<!--                        <a class="nav-link" href="">-->
+<!--                            <i class="fas fa-sign-in-alt me-1"></i>Login-->
+<!--                        </a>-->
+<!--                    </li> -->
                     {% endif %}
                 </ul>
             </div>
@@ -211,16 +269,21 @@
 
     <footer class="footer">
         <div class="container">
-            <p class="footer-text">© 2024 Customer Portal. All rights reserved.</p>
+            <p class="footer-text">© 2024 {{ website_name }}. All rights reserved.</p>
             <div class="footer-links">
-                <a href="#"><i class="fas fa-question-circle me-1"></i>Help</a>
-                <a href="#"><i class="fas fa-shield-alt me-1"></i>Privacy</a>
-                <a href="#"><i class="fas fa-file-contract me-1"></i>Terms</a>
+                {% for link in footer_links %}
+                    <a href="{{ link.url }}">{{ link.title }}</a>
+                {% endfor %}
             </div>
         </div>
     </footer>
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% if script %}
+    <script>
+        {{ script|safe }}
+    </script>
+    {% endif %}
 </body>
 </html>

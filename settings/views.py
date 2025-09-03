@@ -1,7 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
-from .models import Website, WebsiteKnowledgebase, EmailTemplate
-from .forms import EmailTemplateForm
+from django.http import JsonResponse # Added
+import smtplib # Added
+import imaplib # Added
+from .models import Website, WebsiteKnowledgebase, EmailTemplate, UvSwiftmailer, UvMailbox, UvEmailSettings
+from .forms import EmailTemplateForm, UvSwiftmailerForm, UvMailboxForm, UvEmailSettingsForm
 from django.contrib import messages
 import pytz
 from django.core.files.storage import FileSystemStorage
@@ -191,3 +194,229 @@ def email_template_delete(request, pk):
     template.delete()
     messages.success(request, 'Email template deleted successfully!')
     return redirect(reverse('email_template_list'))
+
+
+@admin_login_required
+def uv_swiftmailer_list(request):
+    swiftmailers = UvSwiftmailer.objects.all().order_by('name')
+    context = {
+        'swiftmailers': swiftmailers
+    }
+    return render(request, 'settings/swiftmailer_list.html', context)
+
+@admin_login_required
+def uv_swiftmailer_create(request):
+    if request.method == 'POST':
+        form = UvSwiftmailerForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Swift Mailer configuration created successfully!')
+            return redirect(reverse('uv_swiftmailer_list'))
+    else:
+        form = UvSwiftmailerForm()
+    context = {
+        'form': form,
+        'view_title': 'Create Swift Mailer Configuration'
+    }
+    return render(request, 'settings/swiftmailer_form.html', context)
+
+@admin_login_required
+def uv_swiftmailer_edit(request, pk):
+    swiftmailer = get_object_or_404(UvSwiftmailer, pk=pk)
+    if request.method == 'POST':
+        form = UvSwiftmailerForm(request.POST, instance=swiftmailer)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Swift Mailer configuration updated successfully!')
+            return redirect(reverse('uv_swiftmailer_list'))
+    else:
+        form = UvSwiftmailerForm(instance=swiftmailer)
+    context = {
+        'form': form,
+        'view_title': 'Edit Swift Mailer Configuration'
+    }
+    return render(request, 'settings/swiftmailer_form.html', context)
+
+@admin_login_required
+def uv_swiftmailer_delete(request, pk):
+    swiftmailer = get_object_or_404(UvSwiftmailer, pk=pk)
+    swiftmailer.delete()
+    messages.success(request, 'Swift Mailer configuration deleted successfully!')
+    return redirect(reverse('uv_swiftmailer_list'))
+
+
+@admin_login_required
+def uv_mailbox_list(request):
+    mailboxes = UvMailbox.objects.all().order_by('name')
+    context = {
+        'mailboxes': mailboxes
+    }
+    return render(request, 'settings/mailbox_list.html', context)
+
+@admin_login_required
+def uv_mailbox_create(request):
+    if request.method == 'POST':
+        form = UvMailboxForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Mailbox configuration created successfully!')
+            return redirect(reverse('uv_mailbox_list'))
+    else:
+        form = UvMailboxForm()
+    context = {
+        'form': form,
+        'view_title': 'Create Mailbox Configuration'
+    }
+    return render(request, 'settings/mailbox_form.html', context)
+
+@admin_login_required
+def uv_mailbox_edit(request, pk):
+    mailbox = get_object_or_404(UvMailbox, pk=pk)
+    if request.method == 'POST':
+        form = UvMailboxForm(request.POST, instance=mailbox)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Mailbox configuration updated successfully!')
+            return redirect(reverse('uv_mailbox_list'))
+    else:
+        form = UvMailboxForm(instance=mailbox)
+    context = {
+        'form': form,
+        'view_title': 'Edit Mailbox Configuration'
+    }
+    return render(request, 'settings/mailbox_form.html', context)
+
+@admin_login_required
+def uv_mailbox_delete(request, pk):
+    mailbox = get_object_or_404(UvMailbox, pk=pk)
+    mailbox.delete()
+    messages.success(request, 'Mailbox configuration deleted successfully!')
+    return redirect(reverse('uv_mailbox_list'))
+
+
+@admin_login_required
+def uv_email_settings_view(request):
+    email_settings, created = UvEmailSettings.objects.get_or_create(pk=1) # Ensure singleton
+    if request.method == 'POST':
+        form = UvEmailSettingsForm(request.POST, instance=email_settings)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Email settings updated successfully!')
+            return redirect(reverse('uv_email_settings_view'))
+    else:
+        form = UvEmailSettingsForm(instance=email_settings)
+    context = {
+        'form': form,
+        'view_title': 'Email Settings'
+    }
+    return render(request, 'settings/email_settings_form.html', context)
+
+
+@admin_login_required
+def test_swiftmailer_connection(request):
+    if request.method == 'POST':
+        host = request.POST.get('host')
+        port_str = request.POST.get('port')
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        encryption = request.POST.get('encryption')
+        transport = request.POST.get('transport')
+
+        # Validate required fields for SMTP
+        if transport == 'smtp':
+            if not host:
+                return JsonResponse({'success': False, 'message': 'SMTP Server is required for SMTP transport.'})
+            if not port_str:
+                return JsonResponse({'success': False, 'message': 'Port is required for SMTP transport.'})
+            try:
+                port = int(port_str)
+            except ValueError:
+                return JsonResponse({'success': False, 'message': 'Port must be a valid number.'})
+        else: # gmail or yahoo
+            host = None # Will be set by transport type
+            port = None # Will be set by transport type
+
+        # Validate username and password for all transports
+        if not username:
+            return JsonResponse({'success': False, 'message': 'Email (Username) is required.'})
+        if not password:
+            return JsonResponse({'success': False, 'message': 'Password is required.'})
+
+        try:
+            if transport == 'gmail':
+                host = 'smtp.gmail.com'
+                port = 587
+                encryption = 'tls' # Force TLS for Gmail
+            elif transport == 'yahoo':
+                host = 'smtp.mail.yahoo.com'
+                port = 587
+                encryption = 'tls' # Force TLS for Yahoo
+            elif transport == 'smtp':
+                # Host, port, encryption already set from form
+                pass
+            else:
+                return JsonResponse({'success': False, 'message': 'Invalid transport type selected.'})
+
+            if encryption == 'ssl':
+                server = smtplib.SMTP_SSL(host, port, timeout=10)
+            else: # tls or null
+                server = smtplib.SMTP(host, port, timeout=10)
+                if encryption == 'tls':
+                    server.starttls()
+
+            server.login(username, password)
+            server.quit()
+            return JsonResponse({'success': True, 'message': 'Connection successful!'})
+        except smtplib.SMTPAuthenticationError as e:
+            return JsonResponse({'success': False, 'message': f'Authentication Error: {e.smtp_code} {e.smtp_error.decode()}'})
+        except smtplib.SMTPConnectError as e:
+            return JsonResponse({'success': False, 'message': f'Connection Error: Could not connect to SMTP server. Please check host, port, and network connectivity. ({e.smtp_code} {e.smtp_error.decode()})'})
+        except smtplib.SMTPException as e:
+            return JsonResponse({'success': False, 'message': f'SMTP Error: {e}'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'An unexpected error occurred: {e}'})
+    return JsonResponse({'success': False, 'message': 'Invalid request method.'})
+
+
+@admin_login_required
+def test_mailbox_connection(request):
+    if request.method == 'POST':
+        imap_host = request.POST.get('imap_host')
+        imap_port_str = request.POST.get('imap_port')
+        imap_username = request.POST.get('imap_username')
+        imap_password = request.POST.get('imap_password')
+        imap_encryption = request.POST.get('imap_encryption')
+
+        if not imap_host:
+            return JsonResponse({'success': False, 'message': 'IMAP Host is required.'})
+        if not imap_port_str:
+            return JsonResponse({'success': False, 'message': 'IMAP Port is required.'})
+        try:
+            imap_port = int(imap_port_str)
+        except ValueError:
+            return JsonResponse({'success': False, 'message': 'IMAP Port must be a valid number.'})
+        if not imap_username:
+            return JsonResponse({'success': False, 'message': 'IMAP Username is required.'})
+        if not imap_password:
+            return JsonResponse({'success': False, 'message': 'IMAP Password is required.'})
+
+        try:
+            if imap_encryption == 'ssl':
+                mail = imaplib.IMAP4_SSL(imap_host, imap_port)
+            else: # 'tls' or 'null'
+                mail = imaplib.IMAP4(imap_host, imap_port)
+                if imap_encryption == 'tls':
+                    # IMAP STARTTLS is not directly supported by imaplib.IMAP4
+                    # It's usually handled by IMAP4_SSL if the server supports it on the default port
+                    # or requires a different port. For simplicity, we'll assume IMAP4_SSL handles it
+                    # or it's a plain IMAP connection.
+                    pass
+
+            mail.login(imap_username, imap_password)
+            mail.logout() # Logout immediately after successful login
+            return JsonResponse({'success': True, 'message': 'IMAP Connection successful!'})
+        except imaplib.IMAP4.error as e:
+            return JsonResponse({'success': False, 'message': f'IMAP Connection Error: {e}'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'An unexpected error occurred: {e}'})
+    return JsonResponse({'success': False, 'message': 'Invalid request method.'})

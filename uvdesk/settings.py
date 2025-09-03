@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     "knowledgebase",
     "settings",
     "customer",
-    # "configuration",
 ]
 
 MIDDLEWARE = [
@@ -71,6 +70,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "customer.context_processors.layout_settings",
             ],
         },
     },
@@ -143,7 +143,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = 'authentication.User'
 
 # Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'settings.email_backend.UvSwiftmailerEmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@example.com'
 
 LOGIN_REDIRECT_URL = '/member/'

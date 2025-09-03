@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ view_title }} Mailbox Configuration{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>{{ view_title }} Mailbox Configuration</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'uv_mailbox_list' %}">Mailbox Configurations</a></li>
+                        <li class="breadcrumb-item active">{{ view_title }}</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ view_title }}</h3>
+                </div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        {% if form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_name">Name</label>
+                                {{ form.name }}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_email">Email</label>
+                                {{ form.email }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_is_enabled">Enable Mailbox</label>
+                                {{ form.is_enabled }}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_delete_after_fetch">Permanently delete from Inbox</label>
+                                {{ form.delete_after_fetch }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_imap_host">Incoming IMAP Server</label>
+                                {{ form.imap_host }}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_imap_port">Incoming IMAP Port</label>
+                                {{ form.imap_port }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_imap_encryption">IMAP Encryption</label>
+                                {{ form.imap_encryption }}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_imap_username">IMAP Username</label>
+                                {{ form.imap_username }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-6">
+                                <label for="id_imap_password">IMAP Password</label>
+                                <div class="input-group">
+                                    {{ form.imap_password }}
+                                    <div class="input-group-append">
+                                        <span class="input-group-text toggle-password" style="cursor: pointer;">
+                                            <i class="fas fa-eye"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_outbound_transport">Outgoing Mail Transport</label>
+                                {{ form.outbound_transport }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <a href="{% url 'uv_mailbox_list' %}" class="btn btn-secondary ml-2">Cancel</a>
+                        <button type="button" class="btn btn-info ml-2" id="testMailboxConnectionBtn">Test Connection</button>
+                    </div>
+                </form>
+                <div id="testMailboxConnectionResult" class="p-3"></div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Password toggle functionality
+    $('.toggle-password').on('click', function() {
+        var passwordField = $(this).closest('.input-group').find('input');
+        var passwordFieldType = passwordField.attr('type');
+        if (passwordFieldType == 'password') {
+            passwordField.attr('type', 'text');
+            $(this).find('i').removeClass('fa-eye').addClass('fa-eye-slash');
+        } else {
+            passwordField.attr('type', 'password');
+            $(this).find('i').removeClass('fa-eye-slash').addClass('fa-eye');
+        }
+    });
+
+    $('#testMailboxConnectionBtn').on('click', function() {
+        var formData = {
+            'imap_host': $('#id_imap_host').val(),
+            'imap_port': $('#id_imap_port').val(),
+            'imap_username': $('#id_imap_username').val(),
+            'imap_password': $('#id_imap_password').val(),
+            'imap_encryption': $('#id_imap_encryption').val(),
+            'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+        };
+
+        $.ajax({
+            url: "{% url 'test_mailbox_connection' %}",
+            type: 'POST',
+            data: formData,
+            dataType: 'json',
+            beforeSend: function() {
+                $('#testMailboxConnectionResult').html('<div class="alert alert-info">Testing connection...</div>');
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#testMailboxConnectionResult').html('<div class="alert alert-success">' + response.message + '</div>');
+                } else {
+                    $('#testMailboxConnectionResult').html('<div class="alert alert-danger">' + response.message + '</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#testMailboxConnectionResult').html('<div class="alert alert-danger">An error occurred during the test. Please check console for details.</div>');
+                console.error(xhr.responseText);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -7,7 +7,7 @@
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb bg-light rounded-3 p-3 shadow-sm">
             <li class="breadcrumb-item">
-                <a href="{% url 'customer_dashboard' %}" class="text-decoration-none text-primary fw-medium">
+                <a href="{% url 'customer_dashboard' %}" class="text-decoration-none fw-medium" style="color: var(--accent-color);">
                     <i class="fas fa-home me-1"></i>Home
                 </a>
             </li>
@@ -16,14 +16,14 @@
                     {% if category.folders.first %}
                         {% with folder=category.folders.first %}
                             <li class="breadcrumb-item">
-                                <a href="{% url 'folder_detail' folder.id %}" class="text-decoration-none text-primary fw-medium">
+                                <a href="{% url 'folder_detail' folder.id %}" class="text-decoration-none fw-medium" style="color: var(--accent-color);">
                                     <i class="fas fa-folder me-1"></i>{{ folder.name }}
                                 </a>
                             </li>
                         {% endwith %}
                     {% endif %}
                     <li class="breadcrumb-item">
-                        <a href="{% url 'category_detail' category.folders.first.id category.id %}" class="text-decoration-none text-primary fw-medium">
+                        <a href="{% url 'category_detail' category.folders.first.id category.id %}" class="text-decoration-none fw-medium" style="color: var(--accent-color);">
                             <i class="fas fa-tag me-1"></i>{{ category.name }}
                         </a>
                     </li>
@@ -34,7 +34,7 @@
     </nav>
 
     <div class="card shadow-lg border-0 mb-4">
-        <div class="card-header bg-gradient text-white p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-header text-white p-4" style="background: var(--primary-color);">
             <h1 class="mb-3 fw-bold">{{ article.name }}</h1>
             <div class="d-flex flex-wrap gap-3 text-white-50">
                 <div class="d-flex align-items-center">
@@ -58,15 +58,15 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body p-4">
             <div class="text-center">
-                <h4 class="mb-3 text-dark fw-semibold">
-                    <i class="fas fa-question-circle text-primary me-2"></i>
+                <h4 class="mb-3 fw-semibold" style="color: var(--text-primary);">
+                    <i class="fas fa-question-circle me-2" style="color: var(--accent-color);"></i>
                     Was this article helpful?
                 </h4>
                 <div class="d-flex justify-content-center gap-3">
-                    <button class="btn btn-success btn-lg px-4 py-2 rounded-pill shadow-sm" style="transition: all 0.3s ease;">
+                    <button class="btn btn-lg px-4 py-2 rounded-pill shadow-sm" style="background-color: var(--accent-color); color: var(--primary-color); transition: all 0.3s ease;">
                         <i class="fas fa-thumbs-up me-2"></i>Yes, it helped!
                     </button>
-                    <button class="btn btn-outline-danger btn-lg px-4 py-2 rounded-pill shadow-sm" style="transition: all 0.3s ease;">
+                    <button class="btn btn-outline-secondary btn-lg px-4 py-2 rounded-pill shadow-sm" style="transition: all 0.3s ease;">
                         <i class="fas fa-thumbs-down me-2"></i>No, needs improvement
                     </button>
                 </div>
@@ -77,8 +77,8 @@
     {% if related_articles %}
     <div class="card shadow-sm border-0">
         <div class="card-header bg-light border-0 p-4">
-            <h3 class="mb-0 text-dark fw-semibold">
-                <i class="fas fa-lightbulb text-warning me-2"></i>
+            <h3 class="mb-0 fw-semibold" style="color: var(--text-primary);">
+                <i class="fas fa-lightbulb me-2" style="color: var(--accent-color);"></i>
                 Related Articles
             </h3>
         </div>
@@ -89,9 +89,9 @@
                    class="list-group-item list-group-item-action border-0 p-4 text-decoration-none"
                    style="transition: all 0.3s ease;">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-file-alt text-primary me-3"></i>
+                        <i class="fas fa-file-alt me-3" style="color: var(--accent-color);"></i>
                         <div>
-                            <h6 class="mb-1 text-dark fw-medium">{{ related_article.name }}</h6>
+                            <h6 class="mb-1 fw-medium" style="color: var(--text-primary);">{{ related_article.name }}</h6>
                             <small class="text-muted">Click to read more</small>
                         </div>
                         <i class="fas fa-chevron-right text-muted ms-auto"></i>
@@ -117,11 +117,11 @@
 }
 
 .breadcrumb-item a:hover {
-    color: #0056b3 !important;
+    text-decoration: underline !important;
 }
 
 .article-content h1, .article-content h2, .article-content h3 {
-    color: #2c3e50;
+    color: var(--text-primary);
     margin-top: 2rem;
     margin-bottom: 1rem;
 }
@@ -136,7 +136,7 @@
 }
 
 .article-content blockquote {
-    border-left: 4px solid #667eea;
+    border-left: 4px solid var(--accent-color);
     padding-left: 1rem;
     margin: 1.5rem 0;
     font-style: italic;

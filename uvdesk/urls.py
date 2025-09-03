@@ -26,7 +26,6 @@ urlpatterns = [
     path("member/", include("ticket.urls")),
     path("member/knowledgebase/", include("knowledgebase.urls")),
     path("member/settings/", include("settings.urls")),
-    # path("member/", include("core.urls")),
 ]
 
 if settings.DEBUG:

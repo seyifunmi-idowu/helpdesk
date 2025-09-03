@@ -59,7 +59,7 @@
 
 <style>
 .search-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--primary-color);
     border-radius: 16px;
     padding: 2rem;
     color: white;
@@ -87,7 +87,8 @@
 }
 
 .search-icon {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(211, 172, 77, 0.2);
+    color: var(--accent-color);
     border-radius: 12px;
     padding: 0.75rem;
     backdrop-filter: blur(10px);
@@ -113,7 +114,7 @@
 
 .article-card {
     background: white;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 1.5rem;
     text-decoration: none;
@@ -128,14 +129,14 @@
 .article-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    border-color: #667eea;
+    border-color: var(--accent-color);
     text-decoration: none;
     color: inherit;
 }
 
 .article-icon {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+    background: var(--primary-color);
+    color: var(--accent-color);
     border-radius: 10px;
     padding: 0.75rem;
     flex-shrink: 0;
@@ -149,12 +150,12 @@
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0 0 0.5rem 0;
-    color: #1f2937;
+    color: var(--text-primary);
 }
 
 .article-description {
     margin: 0;
-    color: #6b7280;
+    color: var(--text-secondary);
     line-height: 1.5;
 }
 
@@ -165,7 +166,7 @@
 }
 
 .article-card:hover .article-arrow {
-    color: #667eea;
+    color: var(--accent-color);
     transform: translateX(4px);
 }
 
@@ -174,23 +175,23 @@
     padding: 4rem 2rem;
     background: white;
     border-radius: 16px;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-color);
 }
 
 .empty-icon {
-    color: #9ca3af;
+    color: var(--secondary-color);
     margin-bottom: 1.5rem;
 }
 
 .empty-title {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--text-primary);
     margin: 0 0 1rem 0;
 }
 
 .empty-description {
-    color: #6b7280;
+    color: var(--text-secondary);
     margin: 0;
     max-width: 500px;
     margin-left: auto;

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mailbox Configurations{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1>Mailbox Configurations</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+                        <li class="breadcrumb-item active">Mailbox Configurations</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">All Mailbox Configurations</h3>
+                            <div class="card-tools">
+                                <a href="{% url 'uv_mailbox_create' %}" class="btn btn-primary btn-sm">Create New Mailbox</a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <table class="table table-hover text-nowrap">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Enabled</th>
+                                        <th>IMAP Host</th>
+                                        <th>IMAP Port</th>
+                                        <th>Outbound Transport</th>
+                                        <th style="width: 20%">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mailbox in mailboxes %}
+                                    <tr>
+                                        <td>{{ mailbox.name }}</td>
+                                        <td>{{ mailbox.email }}</td>
+                                        <td>
+                                            {% if mailbox.is_enabled %}
+                                                <span class="badge badge-success">Yes</span>
+                                            {% else %}
+                                                <span class="badge badge-danger">No</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ mailbox.imap_host }}</td>
+                                        <td>{{ mailbox.imap_port }}</td>
+                                        <td>{{ mailbox.outbound_transport.name|default:"None" }}</td>
+                                        <td class="project-actions text-right">
+                                            <a class="btn btn-info btn-sm" href="{% url 'uv_mailbox_edit' mailbox.pk %}">
+                                                <i class="fas fa-pencil-alt"></i> Edit
+                                            </a>
+                                            <button type="button" class="btn btn-danger btn-sm delete-btn" data-url="{% url 'uv_mailbox_delete' mailbox.pk %}">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">No Mailbox configurations found.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle delete button click
+    $('.delete-btn').on('click', function(e) {
+        e.preventDefault();
+        var deleteUrl = $(this).data('url');
+        $('#confirmActionForm').attr('action', deleteUrl);
+        $('#confirmActionModal').modal('show');
+    });
+});
+</script>
+{% endblock %}

@@ -23,13 +23,20 @@ def format_count(count):
 @admin_login_required
 def ticket_list(request):
     # Base queryset for all tickets
-    all_tickets = Ticket.objects.all()
+    all_tickets = Ticket.objects.all().order_by('-createdAt')
 
     customer_id = request.GET.get('customer_id')
     customer = None
     if customer_id:
-        all_tickets = all_tickets.filter(customer__user__id=customer_id)
-        customer = User.objects.get(id=customer_id)
+        try:
+            customer_id = int(customer_id)
+            all_tickets = all_tickets.filter(customer__user__id=customer_id)
+            customer = User.objects.get(id=customer_id)
+        except (ValueError, TypeError, User.DoesNotExist):
+            # Handle cases where customer_id is not a valid integer or user does not exist
+            # For now, we'll just ignore the filter and set customer to None
+            customer_id = None
+            customer = None
 
     # Calculate sidebar counts
     all_count = all_tickets.count()
@@ -76,7 +83,14 @@ def get_filtered_tickets_and_counts(request):
 
     tickets_queryset = Ticket.objects.all()
     if customer_id:
-        tickets_queryset = tickets_queryset.filter(customer__user__id=customer_id)
+        try:
+            customer_id = int(customer_id)
+            tickets_queryset = tickets_queryset.filter(customer__user__id=customer_id)
+        except (ValueError, TypeError):
+            # Handle cases where customer_id is not a valid integer (e.g., 'None', '')
+            # You might want to log this or return an error response depending on desired behavior
+            # For now, we'll just ignore the filter if customer_id is invalid
+            pass
 
     # Apply primary filter
     if filter_type == 'new':
@@ -100,8 +114,14 @@ def get_filtered_tickets_and_counts(request):
     # This is important because the sidebar counts should reflect the primary category
     # regardless of the selected status sub-filter.
     all_tickets_for_primary_filter = Ticket.objects.all()
-    if customer_id:
-        all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(customer__user__id=customer_id)
+    # Apply customer_id filter if valid
+    if customer_id: # customer_id might be None if it was invalid in the initial check
+        try:
+            # Ensure customer_id is an int for this filter as well
+            valid_customer_id = int(customer_id)
+            all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(customer__user__id=valid_customer_id)
+        except (ValueError, TypeError):
+            pass # Ignore filter if customer_id is invalid
 
     if filter_type == 'new':
         all_tickets_for_primary_filter = all_tickets_for_primary_filter.filter(is_new=True)

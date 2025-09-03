@@ -22,7 +22,7 @@ class EmailManager:
         Thanks,
         The Admin Team
         """
-        
+
         send_mail(
             subject,
             message,
@@ -49,7 +49,7 @@ class EmailManager:
         Thanks,
         The Admin Team
         """
-        
+
         send_mail(
             subject,
             message,
@@ -75,7 +75,7 @@ class EmailManager:
         Thanks,
         The Admin Team
         """
-        
+
         send_mail(
             subject,
             message,

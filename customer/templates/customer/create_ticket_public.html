@@ -8,10 +8,10 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
-                <div class="card-header text-white position-relative" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); padding: 2rem 2rem 1.5rem;">
+                <div class="card-header text-white position-relative" style="background: var(--primary-color); padding: 2rem 2rem 1.5rem;">
                     <div class="d-flex align-items-center">
-                        <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
-                            <i class="fas fa-plus-circle fa-lg text-white"></i>
+                        <div class="p-3 me-3">
+                            <i class="fas fa-plus-circle fa-lg" style="color: var(--accent-color);"></i>
                         </div>
                         <div>
                             <h3 class="card-title mb-1 fw-bold">Create New Ticket</h3>
@@ -24,7 +24,6 @@
                     {% if messages %}
                         <div class="mb-4">
                             {% for message in messages %}
-                                 Enhanced alert styling
                                 <div class="alert alert-{{ message.tags }} border-0 shadow-sm" style="border-radius: 0.75rem;" role="alert">
                                     <div class="d-flex align-items-center">
                                         {% if message.tags == 'success' %}
@@ -61,9 +60,7 @@
                                         style="border-radius: 0.75rem; border: 2px solid var(--border-color); padding: 1rem; min-height: 120px; resize: vertical; transition: all 0.3s ease;"
                                         placeholder="{{ field.field.widget.attrs.placeholder|default:'Enter details...' }}"
                                         {% if field.field.required %}required{% endif %}
-                                        onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 0.2rem rgba(37, 99, 235, 0.25)'"
-                                        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'"
-                                    >{{ field.value|default:'' }}</textarea>
+                                    ></textarea>
                                 {% elif field.field.widget.input_type == 'select' %}
                                     <select
                                         name="{{ field.name }}"
@@ -71,8 +68,6 @@
                                         class="form-select shadow-sm"
                                         style="border-radius: 0.75rem; border: 2px solid var(--border-color); padding: 1rem; transition: all 0.3s ease;"
                                         {% if field.field.required %}required{% endif %}
-                                        onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 0.2rem rgba(37, 99, 235, 0.25)'"
-                                        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'"
                                     >
                                         {% for choice in field.field.choices %}
                                             <option value="{{ choice.0 }}" {% if choice.0 == field.value %}selected{% endif %}>{{ choice.1 }}</option>
@@ -88,8 +83,6 @@
                                         placeholder="{{ field.field.widget.attrs.placeholder|default:'Enter '|add:field.label|lower }}"
                                         value="{{ field.value|default:'' }}"
                                         {% if field.field.required %}required{% endif %}
-                                        onfocus="this.style.borderColor='var(--primary-color)'; this.style.boxShadow='0 0 0 0.2rem rgba(37, 99, 235, 0.25)'"
-                                        onblur="this.style.borderColor='var(--border-color)'; this.style.boxShadow='none'"
                                     />
                                 {% endif %}
 
@@ -113,8 +106,8 @@
                             <button type="button" class="btn btn-outline-secondary me-md-2 px-4 py-2" style="border-radius: 0.75rem; font-weight: 500;" onclick="history.back()">
                                 <i class="fas fa-arrow-left me-2"></i>Cancel
                             </button>
-                            <button type="submit" class="btn text-white px-5 py-2 position-relative"
-                                    style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); border: none; border-radius: 0.75rem; font-weight: 600; transition: all 0.3s ease; box-shadow: var(--shadow-md);"
+                            <button type="submit" class="btn px-5 py-2 position-relative"
+                                    style="background-color: var(--accent-color); color: var(--primary-color); border: none; border-radius: 0.75rem; font-weight: 600; transition: all 0.3s ease; box-shadow: var(--shadow-md);"
                                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-lg)'"
                                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow-md)'"
                                     onclick="this.innerHTML='<i class=\'fas fa-spinner fa-spin me-2\'></i>Submitting...'; this.disabled=true; this.form.submit();">
@@ -138,8 +131,8 @@
 <style>
     .form-control:focus,
     .form-select:focus {
-        border-color: var(--primary-color) !important;
-        box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25) !important;
+        border-color: var(--accent-color) !important;
+        box-shadow: 0 0 0 0.2rem rgba(211, 172, 77, 0.25) !important;
     }
 
     .form-control::placeholder {

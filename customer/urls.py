@@ -5,7 +5,7 @@ from . import views
 urlpatterns = [
     path('', views.dashboard, name='customer_dashboard'),
     path('create-ticket/', views.create_ticket_public, name='create_ticket_public'),
-    path('login/', views.customer_login, name='customer_login'),
+    # path('login/', views.customer_login, name='customer_login'),
     path('logout/', views.customer_logout, name='customer_logout'),
 
     # Public Knowledge Base URLs (Customer App)

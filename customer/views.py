@@ -3,15 +3,20 @@ from django.db import models
 from django.db.models import Q
 from authentication.decorators import customer_login_required
 from knowledgebase.models import Folder, SolutionCategory, Article
-from ticket.models import Ticket, TicketType, TicketPriority, TicketStatus
-from authentication.models import User, UserInstance, SupportRole
+from ticket.models import Ticket, TicketStatus
 from .forms import PublicTicketForm
 from django.contrib import messages
+from settings.models import WebsiteKnowledgebase
+from django.contrib.auth import authenticate, login, logout
+from authentication.email import EmailManager
+from authentication.models import User, UserInstance, SupportRole
+from django.utils import timezone
+
 
 def dashboard(request):
     folders = Folder.objects.all()
     context = {
-        'folders': folders
+        'folders': folders,
     }
     return render(request, 'customer/dashboard.html', context)
 
@@ -139,13 +144,6 @@ def public_article_detail(request, article_slug):
     }
     return render(request, 'customer/public_article_detail.html', context)
 
-from django.contrib.auth import authenticate, login, logout
-from authentication.email import EmailManager
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from authentication.models import User, UserInstance, SupportRole
-from django.utils import timezone
 
 def customer_login(request):
     if request.method == 'POST':

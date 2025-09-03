@@ -69,6 +69,86 @@ class EmailTemplate(models.Model):
 
     class Meta:
         db_table = 'uv_email_templates'
+        verbose_name = "Email Template"
+        verbose_name_plural = "Email Templates"
 
     def __str__(self):
         return self.name
+
+
+class UvSwiftmailer(models.Model):
+    TRANSPORT_CHOICES = [
+        ('smtp', 'SMTP'),
+        ('gmail', 'Gmail'),
+        ('yahoo', 'Yahoo'),
+    ]
+    ENCRYPTION_CHOICES = [
+        ('ssl', 'SSL'),
+        ('tls', 'TLS'),
+        ('null', 'None'),
+    ]
+
+    name = models.CharField(max_length=191, verbose_name="Friendly Name")
+    transport = models.CharField(max_length=10, choices=TRANSPORT_CHOICES, verbose_name="Transport Type")
+    host = models.CharField(max_length=191, null=True, blank=True, verbose_name="SMTP Host")
+    port = models.IntegerField(null=True, blank=True, verbose_name="SMTP Port")
+    encryption = models.CharField(max_length=10, choices=ENCRYPTION_CHOICES, default='tls', verbose_name="Encryption Mode")
+    username = models.CharField(max_length=191, verbose_name="Username")
+    password = models.CharField(max_length=255, verbose_name="Password") # Storing as CharField, encryption handled at app level
+    sender_address = models.CharField(max_length=191, verbose_name="Sender Address")
+
+    class Meta:
+        db_table = "uv_swiftmailer"
+        verbose_name = "Swift Mailer Configuration"
+        verbose_name_plural = "Swift Mailer Configurations"
+
+    def __str__(self):
+        return self.name
+
+
+class UvMailbox(models.Model):
+    IMAP_ENCRYPTION_CHOICES = [
+        ('ssl', 'SSL'),
+        ('tls', 'TLS'),
+        ('null', 'None'),
+    ]
+
+    name = models.CharField(max_length=191, verbose_name="Mailbox Name")
+    email = models.CharField(max_length=191, verbose_name="Email Address")
+    is_enabled = models.BooleanField(default=True, verbose_name="Enable Mailbox")
+    delete_after_fetch = models.BooleanField(default=False, verbose_name="Permanently delete from Inbox")
+    imap_host = models.CharField(max_length=191, verbose_name="Incoming IMAP Server")
+    imap_port = models.IntegerField(verbose_name="Incoming IMAP Port")
+    imap_encryption = models.CharField(max_length=10, choices=IMAP_ENCRYPTION_CHOICES, default='ssl', verbose_name="IMAP Encryption")
+    imap_username = models.CharField(max_length=191, verbose_name="IMAP Username")
+    imap_password = models.CharField(max_length=255, verbose_name="IMAP Password") # Storing as CharField, encryption handled at app level
+    outbound_transport = models.ForeignKey(UvSwiftmailer, on_delete=models.SET_NULL, null=True, blank=True, related_name='mailboxes', verbose_name="Outgoing Mail Transport")
+
+    class Meta:
+        db_table = "uv_mailbox"
+        verbose_name = "Mailbox Configuration"
+        verbose_name_plural = "Mailbox Configurations"
+
+    def __str__(self):
+        return self.name
+
+
+class UvEmailSettings(models.Model):
+    system_email = models.CharField(max_length=191, verbose_name="System Email ID")
+    system_sender_name = models.CharField(max_length=191, verbose_name="System Sender Name")
+    active_mailbox = models.OneToOneField(UvMailbox, on_delete=models.SET_NULL, null=True, blank=True, related_name='active_settings', verbose_name="Active Mailbox for Incoming")
+    active_swiftmailer = models.OneToOneField(UvSwiftmailer, on_delete=models.SET_NULL, null=True, blank=True, related_name='active_settings', verbose_name="Default Swift Mailer for Outgoing")
+
+    class Meta:
+        db_table = "uv_email_settings"
+        verbose_name = "Email Setting"
+        verbose_name_plural = "Email Settings"
+
+    def __str__(self):
+        return "Email Settings"
+
+    def save(self, *args, **kwargs):
+        # Ensure only one instance of UvEmailSettings exists
+        if not self.pk and UvEmailSettings.objects.exists():
+            raise Exception("There can be only one UvEmailSettings instance.")
+        return super(UvEmailSettings, self).save(*args, **kwargs)

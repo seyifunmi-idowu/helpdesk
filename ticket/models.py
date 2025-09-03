@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Ticket(models.Model):
@@ -13,7 +14,7 @@ class Ticket(models.Model):
     isTrashed = models.BooleanField(default=False)
     isAgentViewed = models.BooleanField(default=False)
     isCustomerViewed = models.BooleanField(default=False)
-    createdAt = models.DateTimeField(auto_now_add=True)
+    createdAt = models.DateTimeField(default=timezone.now)
     updatedAt = models.DateTimeField(auto_now=True)
     customerRepliedAt = models.DateTimeField(null=True, blank=True)
     outlookConversationId = models.TextField(null=True, blank=True)
@@ -82,7 +83,7 @@ class Thread(models.Model):
     isLocked = models.BooleanField(default=False)
     isBookmarked = models.BooleanField(default=False)
     message = models.TextField(null=True, blank=True)
-    createdAt = models.DateTimeField(auto_now_add=True)
+    createdAt = models.DateTimeField(default=timezone.now)
     updatedAt = models.DateTimeField(auto_now=True)
     agentViewedAt = models.DateTimeField(null=True, blank=True)
     customerViewedAt = models.DateTimeField(null=True, blank=True)
@@ -93,7 +94,7 @@ class Thread(models.Model):
         db_table = "uv_thread"
 
     def __str__(self):
-        return f"Thread for {self.ticket.subject} by {self.user.email if self.user else 'N/A'}"
+        return f"Thread for {self.ticket.subject} by {self.user.user.email if self.user and self.user.user else 'N/A'}"
 
 class Attachment(models.Model):
     thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name='attachments')
@@ -241,7 +242,7 @@ class AgentActivity(models.Model):
         db_table = "uv_agent_activity"
 
     def __str__(self):
-        return f"{self.agent.email} - {self.action} at {self.createdAt}"
+        return f"{self.agent.user.email if self.agent and self.agent.user else 'N/A'} - {self.threadType} at {self.createdAt}"
 
 class PreparedResponse(models.Model):
     name = models.CharField(max_length=191)
