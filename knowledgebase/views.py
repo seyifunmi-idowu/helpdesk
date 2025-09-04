@@ -8,10 +8,11 @@ from .forms import AnnouncementForm, MarketingModuleForm, FolderForm, CategoryFo
 from authentication.models import SupportGroup
 from ticket.models import Tag
 import json
-from authentication.decorators import admin_login_required
+from authentication.decorators import admin_login_required, permission_required
 
 # Announcement Views
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT')
 def announcement_list(request):
     announcements = Announcement.objects.all()
 
@@ -58,6 +59,7 @@ def announcement_list(request):
     return render(request, "announcement_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT')
 def announcement_create_edit(request, pk=None):
     if pk:
         announcement = get_object_or_404(Announcement, pk=pk)
@@ -86,6 +88,7 @@ def announcement_create_edit(request, pk=None):
     return render(request, 'announcement_create_edit.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT')
 @require_POST
 def announcement_delete(request, pk):
     announcement = get_object_or_404(Announcement, pk=pk)
@@ -94,6 +97,7 @@ def announcement_delete(request, pk):
 
 # Marketing Module Views
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT')
 def marketing_module_list(request):
     marketing_modules = MarketingModule.objects.all()
 
@@ -140,6 +144,7 @@ def marketing_module_list(request):
     return render(request, "marketing_module_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT')
 def marketing_module_create_edit(request, pk=None):
     if pk:
         module = get_object_or_404(MarketingModule, pk=pk)
@@ -163,6 +168,7 @@ def marketing_module_create_edit(request, pk=None):
     return render(request, 'marketing_module_create_edit.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT')
 @require_POST
 def marketing_module_delete(request, pk):
     module = get_object_or_404(MarketingModule, pk=pk)
@@ -171,6 +177,7 @@ def marketing_module_delete(request, pk):
 
 # Folder Views
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 def folder_list(request):
     folders = Folder.objects.all()
 
@@ -205,6 +212,7 @@ def folder_list(request):
     return render(request, "folder_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 def folder_create_edit(request, pk=None):
     if pk:
         folder = get_object_or_404(Folder, pk=pk)
@@ -228,6 +236,7 @@ def folder_create_edit(request, pk=None):
     return render(request, 'folder_create_edit.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 @require_POST
 def folder_delete(request, pk):
     folder = get_object_or_404(Folder, pk=pk)
@@ -236,6 +245,7 @@ def folder_delete(request, pk):
 
 # Category Views
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 def category_list(request):
     categories = SolutionCategory.objects.all()
 
@@ -272,6 +282,7 @@ def category_list(request):
     return render(request, "category_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 def category_create_edit(request, pk=None):
     category = None
     if pk:
@@ -295,6 +306,7 @@ def category_create_edit(request, pk=None):
     return render(request, 'category_create_edit.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 @require_POST
 def category_delete(request, pk):
     category = get_object_or_404(SolutionCategory, pk=pk)
@@ -303,6 +315,7 @@ def category_delete(request, pk):
 
 # Article Views
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 def article_list(request):
     articles = Article.objects.all()
 
@@ -362,6 +375,7 @@ def article_list(request):
     return render(request, "article_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 def article_create_edit(request, pk=None):
     if pk:
         article = get_object_or_404(Article, pk=pk)
@@ -388,6 +402,7 @@ def article_create_edit(request, pk=None):
     return render(request, 'article_create_edit.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 @require_POST
 def article_delete(request, pk):
     article = get_object_or_404(Article, pk=pk)
@@ -395,12 +410,14 @@ def article_delete(request, pk):
     return redirect('article_list')
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 def article_search_api(request):
     query = request.GET.get('q', '')
     articles = Article.objects.filter(name__icontains=query).values('id', 'name')[:10] # Limit to 10 results
     return JsonResponse(list(articles), safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 @require_http_methods(["GET"])
 def get_related_articles_api(request, article_id):
     article = get_object_or_404(Article, pk=article_id)
@@ -408,6 +425,7 @@ def get_related_articles_api(request, article_id):
     return JsonResponse(list(related_articles), safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 @require_http_methods(["POST"])
 def add_related_article_api(request, article_id):
     article = get_object_or_404(Article, pk=article_id)
@@ -426,6 +444,7 @@ def add_related_article_api(request, article_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_KNOWLEDGEBASE')
 @require_http_methods(["POST"])
 def remove_related_article_api(request, article_id):
     article = get_object_or_404(Article, pk=article_id)

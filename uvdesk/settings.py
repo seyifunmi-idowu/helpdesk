@@ -71,6 +71,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "customer.context_processors.layout_settings",
+                "authentication.context_processors.permission_context", # Added this line
             ],
         },
     },

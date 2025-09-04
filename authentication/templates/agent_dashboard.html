@@ -32,11 +32,15 @@
                         </div>
                         <div class="card-body p-0">
                             <ul class="list-group list-group-flush">
+                                {% if perms.ROLE_AGENT_MANAGE_KNOWLEDGEBASE %}
                                 <li class="list-group-item"><a href="{% url 'article_list' %}"><i class="fas fa-newspaper fa-fw mr-2"></i> Articles</a></li>
-                                <li class="list-group-item"><a href="{% url 'announcement_list' %}"><i class="fas fa-sitemap fa-fw mr-2"></i> Categories</a></li>
+                                <li class="list-group-item"><a href="{% url 'category_list' %}"><i class="fas fa-sitemap fa-fw mr-2"></i> Categories</a></li>
                                 <li class="list-group-item"><a href="{% url 'folder_list' %}"><i class="fas fa-folder fa-fw mr-2"></i> Folders</a></li>
-                                <li class="list-group-item"><a href="{% url 'category_list' %}"><i class="fas fa-bullhorn fa-fw mr-2"></i> Marketing Announcement</a></li>
+                                {% endif %}
+                                {% if perms.ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT %}
+                                <li class="list-group-item"><a href="{% url 'announcement_list' %}"><i class="fas fa-bullhorn fa-fw mr-2"></i> Marketing Announcement</a></li>
                                 <li class="list-group-item"><a href="{% url 'marketing_module_list' %}"><i class="fas fa-cubes fa-fw mr-2"></i> Marketing Modules</a></li>
+                                {% endif %}
                             </ul>
                         </div>
                     </div>
@@ -48,11 +52,21 @@
                         </div>
                         <div class="card-body p-0">
                             <ul class="list-group list-group-flush">
+                                {% if perms.ROLE_AGENT_MANAGE_AGENT %}
                                 <li class="list-group-item"><a href="{% url 'agent_list' %}"><i class="fas fa-user-tie fa-fw mr-2"></i> Agents</a></li>
+                                {% endif %}
+                                {% if perms.ROLE_AGENT_MANAGE_CUSTOMER %}
                                 <li class="list-group-item"><a href="{% url 'customer_list' %}"><i class="fas fa-users fa-fw mr-2"></i> Customers</a></li>
+                                {% endif %}
+                                {% if perms.ROLE_AGENT_MANAGE_GROUP %}
                                 <li class="list-group-item"><a href="{% url 'group_list' %}"><i class="fas fa-layer-group fa-fw mr-2"></i> Groups</a></li>
+                                {% endif %}
+                                {% if perms.ROLE_AGENT_MANAGE_AGENT_PRIVILEGE %}
                                 <li class="list-group-item"><a href="{% url 'privilege_list' %}"><i class="fas fa-key fa-fw mr-2"></i> Privileges</a></li>
+                                {% endif %}
+                                {% if perms.ROLE_AGENT_MANAGE_SUB_GROUP %}
                                 <li class="list-group-item"><a href="{% url 'team_list' %}"><i class="fas fa-user-friends fa-fw mr-2"></i> Teams</a></li>
+                                {% endif %}
                             </ul>
                         </div>
                     </div>
@@ -64,11 +78,19 @@
                         </div>
                         <div class="card-body p-0">
                             <ul class="list-group list-group-flush">
+                                {% if perms.ROLE_AGENT_MANAGE_WORKFLOW_MANUAL %}
                                 <li class="list-group-item"><a href="{% url 'prepared_response_list' %}"><i class="fas fa-reply fa-fw mr-2"></i> Prepared Responses</a></li>
                                 <li class="list-group-item"><a href="{% url 'saved_reply_list' %}"><i class="fas fa-save fa-fw mr-2"></i> Saved Replies</a></li>
+                                {% endif %}
+                                {% if perms.ROLE_AGENT_MANAGE_TAG %}
                                 <li class="list-group-item"><a href="{% url 'tag_list' %}"><i class="fas fa-tags fa-fw mr-2"></i> Tags</a></li>
+                                {% endif %}
+                                {% if perms.ROLE_AGENT_MANAGE_TICKET_TYPE %}
                                 <li class="list-group-item"><a href="{% url 'ticket_type_list' %}"><i class="fas fa-ticket-alt fa-fw mr-2"></i> Ticket Types</a></li>
+                                {% endif %}
+                                {% if perms.ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC %}
                                 <li class="list-group-item"><a href="{% url 'workflow_list' %}"><i class="fas fa-project-diagram fa-fw mr-2"></i> Workflows</a></li>
+                                {% endif %}
                             </ul>
                         </div>
                     </div>
@@ -95,7 +117,9 @@
                             <ul class="list-group list-group-flush">
                                 <li class="list-group-item"><a href="{% url 'branding_settings' %}"><i class="fas fa-palette fa-fw mr-2"></i> Branding</a></li>
                                 <li class="list-group-item"><a href="{% url 'uv_email_settings_view' %}"><i class="fas fa-envelope fa-fw mr-2"></i> Email Settings</a></li>
+                                {% if perms.ROLE_AGENT_MANAGE_EMAIL_TEMPLATE %}
                                 <li class="list-group-item"><a href="{% url 'email_template_list' %}"><i class="fas fa-file-code fa-fw mr-2"></i> Email Templates</a></li>
+                                {% endif %}
                                 <li class="list-group-item"><a href="{% url 'uv_mailbox_list' %}"><i class="fas fa-inbox fa-fw mr-2"></i> Mailbox</a></li>
                                 <li class="list-group-item"><a href="#"><i class="fab fa-microsoft fa-fw mr-2"></i> Microsoft Apps</a></li>
                                 <li class="list-group-item"><a href="{% url 'spam_settings' %}"><i class="fas fa-shield-alt fa-fw mr-2"></i> Spam Settings</a></li>

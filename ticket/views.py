@@ -10,7 +10,7 @@ from .forms import WorkflowForm, TicketTypeForm, TagForm, SavedReplyForm, Prepar
 from .services import get_or_create_user_instance
 from authentication.models import User, UserInstance, SupportGroup, SupportTeam
 from .constants import PREPARED_RESPONSE_ACTIONS, EMAIL_TEMPLATES, PRIORITIES, STATUSES
-from authentication.decorators import admin_login_required
+from authentication.decorators import admin_login_required, permission_required
 
 def format_count(count):
     if 100 <= count <= 199:
@@ -23,6 +23,7 @@ def format_count(count):
         return str(count)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_EDIT_TICKET')
 def ticket_list(request):
     # Base queryset for all tickets
     all_tickets = Ticket.objects.all().order_by('-createdAt')
@@ -92,6 +93,7 @@ def ticket_list(request):
     return render(request, "ticket_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_EDIT_TICKET')
 def get_filtered_tickets_and_counts(request):
     filter_type = request.GET.get('filter_type', 'all')
     status_code = request.GET.get('status_code', None)
@@ -210,6 +212,7 @@ def get_filtered_tickets_and_counts(request):
     })
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC')
 def workflow_list(request):
     workflows = Workflow.objects.all()
     context = {
@@ -220,6 +223,7 @@ def workflow_list(request):
     return render(request, "workflow_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC')
 def workflow_create(request):
     if request.method == 'POST':
         form = WorkflowForm(request.POST)
@@ -240,6 +244,7 @@ def workflow_create(request):
     return render(request, "workflow_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC')
 def workflow_edit(request, workflow_id):
     workflow = get_object_or_404(Workflow, pk=workflow_id)
     if request.method == 'POST':
@@ -262,6 +267,7 @@ def workflow_edit(request, workflow_id):
     return render(request, "workflow_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC')
 def workflow_delete(request, workflow_id):
     workflow = get_object_or_404(Workflow, pk=workflow_id)
     if request.method == 'POST':
@@ -273,12 +279,13 @@ def workflow_delete(request, workflow_id):
 
 
 @admin_login_required
+@permission_required('ROLE_AGENT_CREATE_TICKET')
 def ticket_create(request):
     if request.method == 'POST':
         form = TicketForm(request.POST)
         if form.is_valid():
             ticket = form.save(commit=False) # Save ticket instance but don't commit yet
-            
+
             # The customer is already set by form.save() in TicketForm's save method
             # Now save the ticket to the database
             ticket.save()
@@ -292,7 +299,7 @@ def ticket_create(request):
                 threadType='initial_message', # Custom type for initial message
                 createdBy='agent', # Agent created it
             )
-            
+
             # Send initial ticket email
             from .email_utils import send_initial_ticket_email
             try:
@@ -318,6 +325,7 @@ def ticket_create(request):
 
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TICKET_TYPE')
 def ticket_type_list(request):
     ticket_types = TicketType.objects.all()
 
@@ -354,6 +362,7 @@ def ticket_type_list(request):
     return render(request, "ticket_type_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TICKET_TYPE')
 def ticket_type_create(request):
     if request.method == 'POST':
         form = TicketTypeForm(request.POST)
@@ -374,6 +383,7 @@ def ticket_type_create(request):
     return render(request, "ticket_type_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TICKET_TYPE')
 def ticket_type_edit(request, ticket_type_id):
     ticket_type = get_object_or_404(TicketType, pk=ticket_type_id)
     if request.method == 'POST':
@@ -396,6 +406,7 @@ def ticket_type_edit(request, ticket_type_id):
     return render(request, "ticket_type_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TICKET_TYPE')
 def ticket_type_delete(request, ticket_type_id):
     ticket_type = get_object_or_404(TicketType, pk=ticket_type_id)
     if request.method == 'POST':
@@ -406,6 +417,7 @@ def ticket_type_delete(request, ticket_type_id):
     return redirect('ticket_type_list')
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TAG')
 def tag_list(request):
     tags = Tag.objects.all()
 
@@ -434,6 +446,7 @@ def tag_list(request):
     return render(request, "tag_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TAG')
 def tag_create(request):
     if request.method == 'POST':
         form = TagForm(request.POST)
@@ -454,6 +467,7 @@ def tag_create(request):
     return render(request, "tag_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TAG')
 def tag_edit(request, tag_id):
     tag = get_object_or_404(Tag, pk=tag_id)
     if request.method == 'POST':
@@ -476,6 +490,7 @@ def tag_edit(request, tag_id):
     return render(request, "tag_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TAG')
 def tag_delete(request, tag_id):
     tag = get_object_or_404(Tag, pk=tag_id)
     if request.method == 'POST':
@@ -486,6 +501,7 @@ def tag_delete(request, tag_id):
     return redirect('tag_list')
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def saved_reply_list(request):
     saved_replies = SavedReplies.objects.all()
 
@@ -526,6 +542,7 @@ def saved_reply_list(request):
     return render(request, "saved_reply_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def saved_reply_create(request):
     if request.method == 'POST':
         form = SavedReplyForm(request.POST)
@@ -554,6 +571,7 @@ def saved_reply_create(request):
     return render(request, "saved_reply_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def saved_reply_edit(request, saved_reply_id):
     saved_reply = get_object_or_404(SavedReplies, pk=saved_reply_id)
     if request.method == 'POST':
@@ -576,6 +594,7 @@ def saved_reply_edit(request, saved_reply_id):
     return render(request, "saved_reply_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def saved_reply_delete(request, saved_reply_id):
     saved_reply = get_object_or_404(SavedReplies, pk=saved_reply_id)
     if request.method == 'POST':
@@ -586,6 +605,7 @@ def saved_reply_delete(request, saved_reply_id):
     return redirect('saved_reply_list')
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def prepared_response_list(request):
     prepared_responses = PreparedResponse.objects.all()
 
@@ -620,6 +640,7 @@ def prepared_response_list(request):
     return render(request, "prepared_response_list.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def prepared_response_create(request):
     if request.method == 'POST':
         form = PreparedResponseForm(request.POST)
@@ -650,6 +671,7 @@ def prepared_response_create(request):
     return render(request, "prepared_response_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def prepared_response_edit(request, prepared_response_id):
     prepared_response = get_object_or_404(PreparedResponse, pk=prepared_response_id)
     current_actions_json = prepared_response.actions if prepared_response.actions else []
@@ -695,6 +717,7 @@ def prepared_response_edit(request, prepared_response_id):
     return render(request, "prepared_response_create_edit.html", context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def prepared_response_delete(request, prepared_response_id):
     prepared_response = get_object_or_404(PreparedResponse, pk=prepared_response_id)
     if request.method == 'POST':
@@ -706,43 +729,52 @@ def prepared_response_delete(request, prepared_response_id):
 
 # API Views
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_AGENT')
 def get_agents(request):
     agents = UserInstance.objects.filter(supportRole__code='ROLE_AGENT').values('id', name=models.F('user__firstName'))
     return JsonResponse(list(agents), safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_GROUP')
 def get_groups(request):
     groups = SupportGroup.objects.all().values('id', 'name')
     return JsonResponse(list(groups), safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_SUB_GROUP')
 def get_teams(request):
     teams = SupportTeam.objects.all().values('id', 'name')
     return JsonResponse(list(teams), safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TAG')
 def get_tags(request):
     tags = Tag.objects.all().values('id', 'name')
     return JsonResponse(list(tags), safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_TICKET_TYPE')
 def get_ticket_types(request):
     ticket_types = TicketType.objects.all().values('id', name=models.F('code'))
     return JsonResponse(list(ticket_types), safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_EDIT_TICKET')
 def get_priorities(request):
     return JsonResponse(PRIORITIES, safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_EDIT_TICKET')
 def get_statuses(request):
     return JsonResponse(STATUSES, safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_EMAIL_TEMPLATE')
 def get_email_templates(request):
     return JsonResponse(EMAIL_TEMPLATES, safe=False)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_UPDATE_TICKET_STATUS')
 def update_ticket_status(request, ticket_id):
     if request.method == 'POST':
         try:
@@ -760,6 +792,7 @@ def update_ticket_status(request, ticket_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_UPDATE_TICKET_PRIORITY')
 def update_ticket_priority(request, ticket_id):
     if request.method == 'POST':
         try:
@@ -777,6 +810,7 @@ def update_ticket_priority(request, ticket_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_ASSIGN_TICKET')
 def update_ticket_agent(request, ticket_id):
     if request.method == 'POST':
         try:
@@ -794,6 +828,7 @@ def update_ticket_agent(request, ticket_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_UPDATE_TICKET_TYPE')
 def update_ticket_type(request, ticket_id):
     if request.method == 'POST':
         try:
@@ -811,6 +846,7 @@ def update_ticket_type(request, ticket_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_ASSIGN_TICKET_GROUP')
 def update_ticket_group(request, ticket_id):
     if request.method == 'POST':
         try:
@@ -828,6 +864,7 @@ def update_ticket_group(request, ticket_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_ASSIGN_TICKET_GROUP') # Assuming team assignment is part of group assignment privilege
 def update_ticket_team(request, ticket_id):
     if request.method == 'POST':
         try:
@@ -862,6 +899,7 @@ def update_ticket_team(request, ticket_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_EDIT_TICKET')
 def ticket_view(request, ticket_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
     threads = ticket.threads.all().order_by('createdAt')
@@ -879,7 +917,7 @@ def ticket_view(request, ticket_id):
                     thread.threadType = 'reply'
                     thread.createdBy = 'agent'
 
-                    
+
 
                     thread.save()
 
@@ -930,7 +968,7 @@ def ticket_view(request, ticket_id):
                     if forward_form.cleaned_data['status']:
                         ticket.status = forward_form.cleaned_data['status']
                         ticket.save()
-                    
+
                     # Call the email sending utility for forward
                     from .email_utils import send_forward_email
                     try:
@@ -943,7 +981,7 @@ def ticket_view(request, ticket_id):
                         messages.success(request, 'Ticket forwarded successfully and email sent.')
                     except Exception as e:
                         messages.error(request, f'Ticket forwarded, but failed to send email: {e}')
-                    
+
                     return redirect('ticket_view', ticket_id=ticket.id)
             else:
                 messages.error(request, 'Please correct the errors below.')
@@ -952,14 +990,14 @@ def ticket_view(request, ticket_id):
             if collaborator_form.is_valid():
                 emails = collaborator_form.cleaned_data['emails']
                 ticket = get_object_or_404(Ticket, id=ticket_id)
-                
+
                 added_count = 0
                 for email in emails:
                     user_instance = get_or_create_user_instance(email)
                     if user_instance not in ticket.collaborators.all():
                         ticket.collaborators.add(user_instance)
                         added_count += 1
-                
+
                 if added_count > 0:
                     messages.success(request, f'{added_count} collaborator(s) added successfully.')
                 else:

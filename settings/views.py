@@ -12,7 +12,7 @@ import os
 from django.conf import settings
 from datetime import datetime
 import json
-from authentication.decorators import admin_login_required
+from authentication.decorators import admin_login_required, permission_required
 
 @admin_login_required
 def branding_settings_view(request):
@@ -148,6 +148,7 @@ def spam_settings_view(request):
     return render(request, 'settings/spam_settings.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_EMAIL_TEMPLATE')
 def email_template_list(request):
     templates = EmailTemplate.objects.all().order_by('name')
     context = {
@@ -156,6 +157,7 @@ def email_template_list(request):
     return render(request, 'settings/email_template_list.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_EMAIL_TEMPLATE')
 def email_template_create(request):
     if request.method == 'POST':
         form = EmailTemplateForm(request.POST)
@@ -172,6 +174,7 @@ def email_template_create(request):
     return render(request, 'settings/email_template_form.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_EMAIL_TEMPLATE')
 def email_template_edit(request, pk):
     template = get_object_or_404(EmailTemplate, pk=pk)
     if request.method == 'POST':
@@ -189,6 +192,7 @@ def email_template_edit(request, pk):
     return render(request, 'settings/email_template_form.html', context)
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_EMAIL_TEMPLATE')
 def email_template_delete(request, pk):
     template = get_object_or_404(EmailTemplate, pk=pk)
     template.delete()
