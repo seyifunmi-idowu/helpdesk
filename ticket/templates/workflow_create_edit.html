@@ -2,7 +2,6 @@
 {% load static %}
 
 {% block content %}
-<div class="content-wrapper">
     <section class="content-header">
         <div class="container-fluid">
             <div class="row mb-2">
@@ -81,8 +80,8 @@
                         <input type="hidden" name="actions" id="id_actions">
                         <!-- IMPORTANT: Add a hidden input field for pre-filled events if needed -->
                         <input type="hidden" name="events_json" id="id_events_json" value="[]">
-                        
-                        
+
+
                         <div class="form-group form-check">
                             {{ form.status }} <label class="form-check-label" for="id_status">Active</label>
                         </div>
@@ -97,7 +96,6 @@
             </div>
         </div>
     </section>
-</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {

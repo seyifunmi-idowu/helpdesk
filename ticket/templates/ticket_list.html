@@ -4,7 +4,6 @@
 {% block title %}Tickets{% endblock %}
 
 {% block content %}
-<div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <div class="container-fluid">
@@ -48,6 +47,19 @@
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <a href="#" class="status-subfilter" data-status-code="{{ code }}">{{ status_data.label }}</a>
                             <span class="badge bg-secondary rounded-pill">{{ status_data.count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Sub-filters (Ticket Labels) - Initially hidden -->
+                <div class="card mt-3" id="label-subfilters" style="display: none;">
+                    <div class="card-header">Labels</div>
+                    <ul class="list-group list-group-flush">
+                        {% for id, label_data in label_counts.items %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="#" class="label-subfilter" data-label-id="{{ id }}">{{ label_data.label }}</a>
+                            <span class="badge bg-info rounded-pill">{{ label_data.count }}</span>
                         </li>
                         {% endfor %}
                     </ul>
@@ -134,25 +146,30 @@
       </div><!-- /.container-fluid -->
     </section>
     <!-- /.content -->
-</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const sidebarFilters = document.querySelectorAll('.sidebar-filter');
         const statusSubfiltersCard = document.getElementById('status-subfilters');
+        const labelSubfiltersCard = document.getElementById('label-subfilters');
         const ticketTableBody = document.querySelector('#ticket-table-body');
         const sidebarFilterBadges = document.querySelectorAll('.sidebar-filter');
         const statusSubfilterBadges = document.querySelectorAll('.status-subfilter');
 
         let currentPrimaryFilter = 'all'; // Default to 'all'
+        let currentStatusCode = null; // Track current status code
+        let currentLabelId = null; // Track current label ID
         let currentPage = 1; // Track current page
 
-        function updateTicketList(primaryFilter, statusCode = null, page = 1) {
+        function updateTicketList(primaryFilter, statusCode = null, labelId = null, page = 1) {
             let url = '{% url "get_filtered_tickets_and_counts" %}';
             const params = new URLSearchParams();
             params.append('filter_type', primaryFilter);
             if (statusCode) {
                 params.append('status_code', statusCode);
+            }
+            if (labelId) {
+                params.append('label_id', labelId);
             }
             params.append('page', page); // Add page parameter
             const customerId = "{{ customer_id }}";
@@ -200,12 +217,25 @@
                         }
                     }
 
+                    // Update label sub-filter counts
+                    for (const id in data.label_counts) {
+                        const subfilterElement = document.querySelector(`.label-subfilter[data-label-id="${id}"]`);
+                        if (subfilterElement) {
+                            subfilterElement.nextElementSibling.textContent = data.label_counts[id].count;
+                        }
+                    }
+
                     // Update pagination controls
                     const paginationNav = document.querySelector('.pagination');
                     paginationNav.innerHTML = ''; // Clear existing pagination
 
+                    const baseUrl = `?filter_type=${primaryFilter}`;
+                    const statusParam = statusCode ? `&status_code=${statusCode}` : '';
+                    const labelParam = labelId ? `&label_id=${labelId}` : '';
+                    const customerParam = customerId ? `&customer_id=${customerId}` : '';
+
                     if (data.pagination.has_previous) {
-                        paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="#" data-page="${data.pagination.previous_page_number}">Previous</a></li>`);
+                        paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="${baseUrl}${statusParam}${labelParam}${customerParam}&page=${data.pagination.previous_page_number}">Previous</a></li>`);
                     } else {
                         paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>`);
                     }
@@ -214,12 +244,12 @@
                         if (pageNum === data.pagination.current_page) {
                             paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item active"><a class="page-link" href="#">${pageNum}</a></li>`);
                         } else {
-                            paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="#" data-page="${pageNum}">${pageNum}</a></li>`);
+                            paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="${baseUrl}${statusParam}${labelParam}${customerParam}&page=${pageNum}">${pageNum}</a></li>`);
                         }
                     });
 
                     if (data.pagination.has_next) {
-                        paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="#" data-page="${data.pagination.next_page_number}">Next</a></li>`);
+                        paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item"><a class="page-link" href="${baseUrl}${statusParam}${labelParam}${customerParam}&page=${data.pagination.next_page_number}">Next</a></li>`);
                     } else {
                         paginationNav.insertAdjacentHTML('beforeend', `<li class="page-item disabled"><a class="page-link" href="#">Next</a></li>`);
                     }
@@ -229,8 +259,8 @@
                         if (!link.parentElement.classList.contains('disabled') && !link.parentElement.classList.contains('active')) {
                             link.addEventListener('click', function(e) {
                                 e.preventDefault();
-                                currentPage = parseInt(this.dataset.page);
-                                updateTicketList(currentPrimaryFilter, null, currentPage); // Pass current filter and new page
+                                const newPage = parseInt(this.dataset.page);
+                                updateTicketList(currentPrimaryFilter, currentStatusCode, currentLabelId, newPage); // Pass all current filters and new page
                             });
                         }
                     });
@@ -243,17 +273,25 @@
         sidebarFilters.forEach(filter => {
             filter.addEventListener('click', function(e) {
                 e.preventDefault();
-                // Show sub-filters when any primary filter is clicked
+                // Show all sub-filters when any primary filter is clicked
                 statusSubfiltersCard.style.display = 'block';
+                labelSubfiltersCard.style.display = 'block';
 
                 const filterType = this.dataset.filterType;
                 currentPrimaryFilter = filterType; // Update current primary filter
-                updateTicketList(currentPrimaryFilter); // Fetch tickets for the selected primary filter, reset to page 1
+                currentStatusCode = null; // Reset status filter when primary filter changes
+                currentLabelId = null; // Reset label filter when primary filter changes
+                updateTicketList(currentPrimaryFilter, currentStatusCode, currentLabelId); // Fetch tickets for the selected primary filter, reset sub-filters and to page 1
 
                 // Remove active class from all sidebar filters
                 sidebarFilters.forEach(f => f.classList.remove('active'));
                 // Add active class to the clicked filter
                 this.classList.add('active');
+
+                // Remove active class from all status sub-filters
+                statusSubfilters.forEach(sf => sf.classList.remove('active'));
+                // Remove active class from all label sub-filters
+                labelSubfilters.forEach(lf => lf.classList.remove('active'));
             });
         });
 
@@ -262,17 +300,41 @@
             subfilter.addEventListener('click', function(e) {
                 e.preventDefault();
                 const statusCode = this.dataset.statusCode;
-                updateTicketList(currentPrimaryFilter, statusCode); // Fetch tickets for current primary and selected status, reset to page 1
+                currentStatusCode = statusCode; // Update current status code
+                currentLabelId = null; // Reset label filter when status filter changes
+                updateTicketList(currentPrimaryFilter, currentStatusCode, currentLabelId); // Fetch tickets for current primary and selected status, reset label filter and to page 1
 
                 // Remove active class from all status sub-filters
                 statusSubfilters.forEach(sf => sf.classList.remove('active'));
                 // Add active class to the clicked sub-filter
                 this.classList.add('active');
+
+                // Remove active class from all label sub-filters
+                labelSubfilters.forEach(lf => lf.classList.remove('active'));
+            });
+        });
+
+        const labelSubfilters = document.querySelectorAll('.label-subfilter');
+        labelSubfilters.forEach(subfilter => {
+            subfilter.addEventListener('click', function(e) {
+                e.preventDefault();
+                const labelId = this.dataset.labelId;
+                currentLabelId = labelId; // Update current label ID
+                currentStatusCode = null; // Reset status filter when label filter changes
+                updateTicketList(currentPrimaryFilter, currentStatusCode, currentLabelId); // Fetch tickets for current primary and selected label, reset status filter and to page 1
+
+                // Remove active class from all label sub-filters
+                labelSubfilters.forEach(lf => lf.classList.remove('active'));
+                // Add active class to the clicked sub-filter
+                this.classList.add('active');
+
+                // Remove active class from all status sub-filters
+                statusSubfilters.forEach(sf => sf.classList.remove('active'));
             });
         });
 
         // Initial load
-        updateTicketList(currentPrimaryFilter, null, currentPage);
+        updateTicketList(currentPrimaryFilter, currentStatusCode, currentLabelId, currentPage);
     });
 </script>
 {% endblock %}

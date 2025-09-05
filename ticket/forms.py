@@ -1,5 +1,5 @@
 from django import forms
-from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse, Thread, TicketStatus, TicketPriority
+from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse, Thread, TicketStatus, TicketPriority, SupportLabel
 from authentication.models import SupportGroup, SupportTeam
 import re
 
@@ -50,9 +50,19 @@ class TicketTypeForm(forms.ModelForm):
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
-        fields = ['name']
+        fields = ['name', 'colorCode']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tag Name'}),
+            'colorCode': forms.TextInput(attrs={'class': 'form-control', 'type': 'color', 'placeholder': 'Color Code'}),
+        }
+
+class SupportLabelForm(forms.ModelForm):
+    class Meta:
+        model = SupportLabel
+        fields = ['name', 'colorCode']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Label Name'}),
+            'colorCode': forms.TextInput(attrs={'class': 'form-control', 'type': 'color', 'placeholder': 'Color Code'}),
         }
 
 class SavedReplyForm(forms.ModelForm):

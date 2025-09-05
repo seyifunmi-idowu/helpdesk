@@ -2,7 +2,6 @@
 {% load static %}
 
 {% block content %}
-<div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <section class="content-header">
       <div class="container-fluid">
@@ -104,6 +103,87 @@
                         {% endfor %}
                     </select>
                 </p>
+                <hr>
+                <strong><i class="fas fa-tags mr-1"></i> Tags</strong>
+                <p class="text-muted">
+                    {% for tag in ticket.supportTags.all %}
+                        <span class="badge badge-primary">{{ tag.name }}
+                            <form method="POST" action="{% url 'ticket_view' ticket.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="remove_tag" value="1">
+                                <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                                <button type="submit" class="btn-close btn-close-white" aria-label="Close"></button>
+                            </form>
+                        </span>
+                    {% endfor %}
+                </p>
+                <form method="POST" action="{% url 'ticket_view' ticket.id %}">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <select class="form-control" name="tag_id">
+                            {% for tag in tags %}
+                                <option value="{{ tag.id }}">{{ tag.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="input-group-append">
+                            <button type="submit" name="add_tag" class="btn btn-success">Add Tag</button>
+                        </div>
+                    </div>
+                </form>
+                <hr>
+                <strong><i class="fas fa-tags mr-1"></i> Tags</strong>
+                <p class="text-muted">
+                    {% for tag in ticket.supportTags.all %}
+                        <span class="badge badge-primary">{{ tag.name }}
+                            <form method="POST" action="{% url 'ticket_view' ticket.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="remove_tag" value="1">
+                                <input type="hidden" name="tag_id" value="{{ tag.id }}">
+                                <button type="submit" class="btn-close btn-close-white" aria-label="Close"></button>
+                            </form>
+                        </span>
+                    {% endfor %}
+                </p>
+                <form method="POST" action="{% url 'ticket_view' ticket.id %}">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <select class="form-control" name="tag_id">
+                            {% for tag in tags %}
+                                <option value="{{ tag.id }}">{{ tag.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="input-group-append">
+                            <button type="submit" name="add_tag" class="btn btn-success">Add Tag</button>
+                        </div>
+                    </div>
+                </form>
+                <hr>
+                <strong><i class="fas fa-user-tag mr-1"></i> Labels</strong>
+                <p class="text-muted">
+                    {% for label in ticket.supportLabels.all %}
+                        <span class="badge" style="background-color: {{ label.colorCode }}">{{ label.name }}
+                            <form method="POST" action="{% url 'ticket_view' ticket.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="remove_label" value="1">
+                                <input type="hidden" name="label_id" value="{{ label.id }}">
+                                <button type="submit" class="btn-close btn-close-white" aria-label="Close"></button>
+                            </form>
+                        </span>
+                    {% endfor %}
+                </p>
+                <form method="POST" action="{% url 'ticket_view' ticket.id %}">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <select class="form-control" name="label_id">
+                            {% for label in labels %}
+                                <option value="{{ label.id }}">{{ label.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="input-group-append">
+                            <button type="submit" name="add_label" class="btn btn-success">Add Label</button>
+                        </div>
+                    </div>
+                </form>
                 <hr>
                 <strong><i class="fas fa-globe-americas mr-1"></i> Country</strong>
                 <p class="text-muted">
@@ -394,7 +474,6 @@
       </div><!-- /.container-fluid -->
     </section>
     <!-- /.content -->
-</div>
 {% endblock %}
 
 {% block extra_js %}

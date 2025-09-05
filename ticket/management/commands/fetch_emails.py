@@ -2,7 +2,7 @@ import imaplib
 import email
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from settings.models import UvMailbox
+from settings.models import UvMailbox, WebsiteKnowledgebase
 from ticket.models import Ticket, Thread, TicketStatus, TicketPriority, TicketType
 from django.db import models
 from authentication.models import User, UserInstance, SupportRole
@@ -62,6 +62,17 @@ class Command(BaseCommand):
       self.stdout.write(self.style.WARNING('No active mailboxes configured. Exiting.'))
       return
 
+    # Get blacklist settings
+    try:
+        website_kb = WebsiteKnowledgebase.objects.first()
+        if website_kb:
+            blacklist = website_kb.black_list or []
+        else:
+            blacklist = []
+    except Exception as e:
+        self.stdout.write(self.style.ERROR(f"Could not load blacklist settings: {e}"))
+        blacklist = []
+
     for mailbox in mailboxes:
       self.stdout.write(self.style.SUCCESS(f'Connecting to mailbox: {mailbox.name} ({mailbox.email})'))
       try:
@@ -80,8 +91,8 @@ class Command(BaseCommand):
           continue
 
         email_ids = email_ids[0].split()
-        # latest_email_ids = email_ids[-10:]
-        latest_email_ids = email_ids
+        latest_email_ids = email_ids[-10:]
+        # latest_email_ids = email_ids
         for email_id in latest_email_ids:
           status, msg_data = mail.fetch(email_id, '(RFC822)')
           if status != 'OK':
@@ -141,13 +152,22 @@ class Command(BaseCommand):
           from_email = None
           if from_header:
             # Fixed regex pattern - properly closed string
-            match = re.match(r'^(.*?)<(.*?)>$', from_header)
+            match = re.match(r'^(.*?)<(.*?)>
+, from_header)
             if match:
               from_name = match.group(1).strip().strip('"')
               from_email = match.group(2).strip()
             else:
               from_email = from_header.strip()
               from_name = from_email.split('@')[0]  # Fallback to local part of email
+
+          # --- Blacklist Check ---
+          if from_email:
+              from_email_lower = from_email.lower()
+              if from_email_lower in blacklist:
+                  self.stdout.write(self.style.WARNING(f"'{from_email}' is in the blacklist. Skipping."))
+                  continue
+          # --- End Blacklist Check ---
 
           # Extract email body
           html_body = None

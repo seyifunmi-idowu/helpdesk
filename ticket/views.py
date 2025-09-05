@@ -5,12 +5,21 @@ from django.contrib import messages
 import json
 from django.http import JsonResponse
 from django.db import models
-from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse, Ticket, TicketStatus, TicketPriority, Thread
-from .forms import WorkflowForm, TicketTypeForm, TagForm, SavedReplyForm, PreparedResponseForm, ThreadForm, NoteForm, ForwardForm, CollaboratorForm, TicketForm
+from .models import Workflow, TicketType, Tag, SavedReplies, PreparedResponse, Ticket, TicketStatus, TicketPriority, Thread, SupportLabel, AgentActivity
+from .forms import WorkflowForm, TicketTypeForm, TagForm, SavedReplyForm, PreparedResponseForm, ThreadForm, NoteForm, ForwardForm, CollaboratorForm, TicketForm, SupportLabelForm
 from .services import get_or_create_user_instance
 from authentication.models import User, UserInstance, SupportGroup, SupportTeam
 from .constants import PREPARED_RESPONSE_ACTIONS, EMAIL_TEMPLATES, PRIORITIES, STATUSES
 from authentication.decorators import admin_login_required, permission_required
+
+def create_agent_activity(agent, ticket, activity_type):
+    AgentActivity.objects.create(
+        agent=agent,
+        ticket=ticket,
+        agentName=agent.user.get_full_name(),
+        customerName=ticket.customer.user.get_full_name(),
+        threadType=activity_type
+    )
 
 def format_count(count):
     if 100 <= count <= 199:
@@ -21,6 +30,50 @@ def format_count(count):
         return "1000+"
     else:
         return str(count)
+
+@admin_login_required
+@permission_required('ROLE_AGENT_VIEW_AGENT_ACTIVITY') # Assuming a new permission is needed
+def agent_activity_list(request):
+    all_activities = AgentActivity.objects.all().order_by('-createdAt')
+
+    ticket_id = request.GET.get('ticket_id')
+    agent_id = request.GET.get('agent_id')
+
+    if ticket_id:
+        all_activities = all_activities.filter(ticket__id=ticket_id)
+    if agent_id:
+        all_activities = all_activities.filter(agent__id=agent_id)
+
+    paginator = Paginator(all_activities, 20) # 20 activities per page
+    page = request.GET.get('page')
+
+    try:
+        agent_activities = paginator.page(page)
+    except PageNotAnInteger:
+        agent_activities = paginator.page(1)
+    except EmptyPage:
+        agent_activities = paginator.page(paginator.num_pages)
+
+    context = {
+        "view": "Agent Activities",
+        "user": request.user,
+        "agent_activities": agent_activities,
+        "ticket_id": ticket_id or '',
+        "agent_id": agent_id or '',
+    }
+    return render(request, "ticket/agent_activity_list.html", context)
+
+@admin_login_required
+@permission_required('ROLE_AGENT_VIEW_AGENT_ACTIVITY') # Assuming a new permission is needed
+def agent_activity_detail(request, activity_id):
+    activity = get_object_or_404(AgentActivity, pk=activity_id)
+
+    context = {
+        "view": "Agent Activity Detail",
+        "user": request.user,
+        "activity": activity,
+    }
+    return render(request, "ticket/agent_activity_detail.html", context)
 
 @admin_login_required
 @permission_required('ROLE_AGENT_EDIT_TICKET')
@@ -40,6 +93,14 @@ def ticket_list(request):
             # For now, we'll just ignore the filter and set customer to None
             customer_id = None
             customer = None
+
+    label_id = request.GET.get('label_id')
+    if label_id:
+        try:
+            label_id = int(label_id)
+            all_tickets = all_tickets.filter(supportLabels__id=label_id)
+        except (ValueError, TypeError):
+            pass
 
     # Set up Paginator
     tickets_per_page = 10  # You can adjust this number
@@ -81,14 +142,26 @@ def ticket_list(request):
         count = all_tickets.filter(status=status).count()
         status_counts[status.code] = {'label': status.description, 'count': format_count(count)}
 
+    # Calculate sub-filter (label) counts
+    label_counts = {}
+    # Only show labels associated with the current agent's user instance
+    current_agent_user_instance = request.user.user_instances.first()
+    if current_agent_user_instance:
+        labels = SupportLabel.objects.filter(user=current_agent_user_instance).order_by('name')
+        for label in labels:
+            count = all_tickets.filter(supportLabels=label).count()
+            label_counts[label.id] = {'label': label.name, 'count': format_count(count)}
+
     context = {
         "view": "Tickets",
         "user": request.user,
         "sidebar_filters": sidebar_filters,
         "status_counts": status_counts,
+        "label_counts": label_counts,
         "tickets": tickets, # Pass the Page object
         "customer": customer,
         "customer_id": customer_id,
+        "selected_label_id": label_id, # Pass selected label ID to template
     }
     return render(request, "ticket_list.html", context)
 
@@ -97,6 +170,7 @@ def ticket_list(request):
 def get_filtered_tickets_and_counts(request):
     filter_type = request.GET.get('filter_type', 'all')
     status_code = request.GET.get('status_code', None)
+    label_id = request.GET.get('label_id', None)
     customer_id = request.GET.get('customer_id')
 
     tickets_queryset = Ticket.objects.all().order_by('-createdAt')
@@ -128,6 +202,14 @@ def get_filtered_tickets_and_counts(request):
     if status_code:
         tickets_queryset = tickets_queryset.filter(status__code=status_code)
 
+    # Apply label sub-filter if provided
+    if label_id:
+        try:
+            label_id = int(label_id)
+            tickets_queryset = tickets_queryset.filter(supportLabels__id=label_id)
+        except (ValueError, TypeError):
+            pass
+
     # Set up Paginator for the filtered queryset
     tickets_per_page = 100  # Consistent with ticket_list view
     paginator = Paginator(tickets_queryset, tickets_per_page)
@@ -140,9 +222,9 @@ def get_filtered_tickets_and_counts(request):
     except EmptyPage:
         tickets_page_obj = paginator.page(paginator.num_pages)
 
-    # Recalculate sidebar counts based on the current primary filter (before status filter)
+    # Recalculate sidebar counts based on the current primary filter (before status and label filter)
     # This is important because the sidebar counts should reflect the primary category
-    # regardless of the selected status sub-filter.
+    # regardless of the selected status/label sub-filter.
     all_tickets_for_primary_filter = Ticket.objects.all()
     # Apply customer_id filter if valid
     if customer_id: # customer_id might be None if it was invalid in the initial check
@@ -183,6 +265,15 @@ def get_filtered_tickets_and_counts(request):
         count = all_tickets_for_primary_filter.filter(status=status).count()
         status_counts_updated[status.code] = {'label': status.description, 'count': format_count(count)}
 
+    # Recalculate label counts based on the current primary filter
+    label_counts_updated = {}
+    current_agent_user_instance = request.user.user_instances.first()
+    if current_agent_user_instance:
+        labels = SupportLabel.objects.filter(user=current_agent_user_instance).order_by('name')
+        for label in labels:
+            count = all_tickets_for_primary_filter.filter(supportLabels=label).count()
+            label_counts_updated[label.id] = {'label': label.name, 'count': format_count(count)}
+
     # Serialize tickets
     tickets_data = []
     for ticket in tickets_page_obj:
@@ -200,6 +291,7 @@ def get_filtered_tickets_and_counts(request):
         'tickets': tickets_data,
         'sidebar_filters': sidebar_filters_updated,
         'status_counts': status_counts_updated,
+        'label_counts': label_counts_updated,
         'pagination': {
             'num_pages': tickets_page_obj.paginator.num_pages,
             'current_page': tickets_page_obj.number,
@@ -501,6 +593,74 @@ def tag_delete(request, tag_id):
     return redirect('tag_list')
 
 @admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_SUPPORT_LABEL')
+def support_label_list(request):
+    labels = SupportLabel.objects.filter(user=request.user.user_instances.first())
+    context = {
+        "view": "Support Labels",
+        "user": request.user,
+        "labels": labels
+    }
+    return render(request, "support_label_list.html", context)
+
+@admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_SUPPORT_LABEL')
+def support_label_create(request):
+    if request.method == 'POST':
+        form = SupportLabelForm(request.POST)
+        if form.is_valid():
+            label = form.save(commit=False)
+            label.user = request.user.user_instances.first()
+            label.save()
+            messages.success(request, "Support Label created successfully.")
+            return redirect('support_label_list')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = SupportLabelForm()
+
+    context = {
+        "view": "Create Support Label",
+        "user": request.user,
+        "form": form
+    }
+    return render(request, "support_label_create_edit.html", context)
+
+@admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_SUPPORT_LABEL')
+def support_label_edit(request, label_id):
+    label = get_object_or_404(SupportLabel, pk=label_id, user=request.user.user_instances.first())
+    if request.method == 'POST':
+        form = SupportLabelForm(request.POST, instance=label)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Support Label updated successfully.")
+            return redirect('support_label_list')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = SupportLabelForm(instance=label)
+
+    context = {
+        "view": "Edit Support Label",
+        "user": request.user,
+        "form": form,
+        "label_id": label_id
+    }
+    return render(request, "support_label_create_edit.html", context)
+
+@admin_login_required
+@permission_required('ROLE_AGENT_MANAGE_SUPPORT_LABEL')
+def support_label_delete(request, label_id):
+    label = get_object_or_404(SupportLabel, pk=label_id, user=request.user.user_instances.first())
+    if request.method == 'POST':
+        label.delete()
+        messages.success(request, f"Support Label '{label.name}' deleted successfully.")
+    else:
+        messages.error(request, "Invalid request method.")
+    return redirect('support_label_list')
+
+@admin_login_required
 @permission_required('ROLE_AGENT_MANAGE_WORKFLOW_MANUAL')
 def saved_reply_list(request):
     saved_replies = SavedReplies.objects.all()
@@ -784,6 +944,7 @@ def update_ticket_status(request, ticket_id):
                 new_status = get_object_or_404(TicketStatus, id=new_status_id)
                 ticket.status = new_status
                 ticket.save()
+                create_agent_activity(request.user.user_instances.first(), ticket, f"status_changed_to_{new_status.code}")
                 return JsonResponse({'success': True, 'message': 'Ticket status updated successfully.'})
             else:
                 return JsonResponse({'success': False, 'error': 'No status ID provided.'}, status=400)
@@ -802,6 +963,7 @@ def update_ticket_priority(request, ticket_id):
                 new_priority = get_object_or_404(TicketPriority, id=new_priority_id)
                 ticket.priority = new_priority
                 ticket.save()
+                create_agent_activity(request.user.user_instances.first(), ticket, f"priority_changed_to_{new_priority.code}")
                 return JsonResponse({'success': True, 'message': 'Ticket priority updated successfully.'})
             else:
                 return JsonResponse({'success': False, 'error': 'No priority ID provided.'}, status=400)
@@ -819,8 +981,10 @@ def update_ticket_agent(request, ticket_id):
             if new_agent_id and new_agent_id != '0': # Check for '0' as unassigned
                 new_agent = get_object_or_404(UserInstance, id=new_agent_id)
                 ticket.agent = new_agent
+                create_agent_activity(request.user.user_instances.first(), ticket, f"agent_assigned_to_{new_agent.user.email}")
             else:
                 ticket.agent = None # Set to None for unassigned
+                create_agent_activity(request.user.user_instances.first(), ticket, "agent_unassigned")
             ticket.save()
             return JsonResponse({'success': True, 'message': 'Ticket agent updated successfully.'})
         except Exception as e:
@@ -838,6 +1002,7 @@ def update_ticket_type(request, ticket_id):
                 new_type = get_object_or_404(TicketType, id=new_type_id)
                 ticket.type = new_type
                 ticket.save()
+                create_agent_activity(request.user.user_instances.first(), ticket, f"type_changed_to_{new_type.code}")
                 return JsonResponse({'success': True, 'message': 'Ticket type updated successfully.'})
             else:
                 return JsonResponse({'success': False, 'error': 'No type ID provided.'}, status=400)
@@ -855,8 +1020,10 @@ def update_ticket_group(request, ticket_id):
             if new_group_id and new_group_id != '0': # Check for '0' as unassigned
                 new_group = get_object_or_404(SupportGroup, id=new_group_id)
                 ticket.supportGroup = new_group
+                create_agent_activity(request.user.user_instances.first(), ticket, f"group_changed_to_{new_group.name}")
             else:
                 ticket.supportGroup = None # Set to None for unassigned
+                create_agent_activity(request.user.user_instances.first(), ticket, "group_unassigned")
             ticket.save()
             return JsonResponse({'success': True, 'message': 'Ticket group updated successfully.'})
         except Exception as e:
@@ -873,8 +1040,10 @@ def update_ticket_team(request, ticket_id):
             if new_team_id and new_team_id != '0': # Check for '0' as unassigned
                 new_team = get_object_or_404(SupportTeam, id=new_team_id)
                 ticket.supportTeam = new_team
+                create_agent_activity(request.user.user_instances.first(), ticket, f"team_changed_to_{new_team.name}")
             else:
                 ticket.supportTeam = None # Set to None for unassigned
+                create_agent_activity(request.user.user_instances.first(), ticket, "team_unassigned")
             ticket.save()
             return JsonResponse({'success': True, 'message': 'Ticket team updated successfully.'})
         except Exception as e:
@@ -905,6 +1074,43 @@ def ticket_view(request, ticket_id):
     threads = ticket.threads.all().order_by('createdAt')
 
     if request.method == 'POST':
+        agent_instance = request.user.user_instances.first()
+        if 'add_tag' in request.POST:
+            tag_id = request.POST.get('tag_id')
+            if tag_id:
+                tag = get_object_or_404(Tag, id=tag_id)
+                ticket.supportTags.add(tag)
+                create_agent_activity(agent_instance, ticket, f"added_tag_{tag.name}")
+                messages.success(request, f"Tag '{tag.name}' added successfully.")
+            return redirect('ticket_view', ticket_id=ticket.id)
+
+        if 'remove_tag' in request.POST:
+            tag_id = request.POST.get('tag_id')
+            if tag_id:
+                tag = get_object_or_404(Tag, id=tag_id)
+                ticket.supportTags.remove(tag)
+                create_agent_activity(agent_instance, ticket, f"removed_tag_{tag.name}")
+                messages.success(request, f"Tag '{tag.name}' removed successfully.")
+            return redirect('ticket_view', ticket_id=ticket.id)
+
+        if 'add_label' in request.POST:
+            label_id = request.POST.get('label_id')
+            if label_id:
+                label = get_object_or_404(SupportLabel, id=label_id, user=agent_instance)
+                ticket.supportLabels.add(label)
+                create_agent_activity(agent_instance, ticket, f"added_label_{label.name}")
+                messages.success(request, f"Label '{label.name}' added successfully.")
+            return redirect('ticket_view', ticket_id=ticket.id)
+
+        if 'remove_label' in request.POST:
+            label_id = request.POST.get('label_id')
+            if label_id:
+                label = get_object_or_404(SupportLabel, id=label_id)
+                ticket.supportLabels.remove(label)
+                create_agent_activity(agent_instance, ticket, f"removed_label_{label.name}")
+                messages.success(request, f"Label '{label.name}' removed successfully.")
+            return redirect('ticket_view', ticket_id=ticket.id)
+
         if 'reply_form' in request.POST:
             reply_form = ThreadForm(request.POST)
             if reply_form.is_valid():
@@ -913,18 +1119,13 @@ def ticket_view(request, ticket_id):
                 else:
                     thread = reply_form.save(commit=False)
                     thread.ticket = ticket
-                    thread.user = request.user.user_instances.first()
+                    thread.user = agent_instance
                     thread.threadType = 'reply'
                     thread.createdBy = 'agent'
-
-
-
                     thread.save()
-
-                    # Call the email sending utility
+                    create_agent_activity(agent_instance, ticket, 'agent_replied')
                     from .email_utils import send_reply_email
                     send_reply_email(ticket, thread, reply_form.cleaned_data.get('send_to_collaborators_cc_bcc'))
-
                     if reply_form.cleaned_data['status']:
                         ticket.status = reply_form.cleaned_data['status']
                         ticket.save()
@@ -940,10 +1141,11 @@ def ticket_view(request, ticket_id):
                 else:
                     thread = note_form.save(commit=False)
                     thread.ticket = ticket
-                    thread.user = request.user.user_instances.first()
+                    thread.user = agent_instance
                     thread.threadType = 'note'
                     thread.createdBy = 'agent'
                     thread.save()
+                    create_agent_activity(agent_instance, ticket, 'agent_added_note')
                     if note_form.cleaned_data['status']:
                         ticket.status = note_form.cleaned_data['status']
                         ticket.save()
@@ -957,24 +1159,22 @@ def ticket_view(request, ticket_id):
                 if not forward_form.cleaned_data['message']:
                     messages.error(request, 'Forward message cannot be empty.')
                 else:
-                    # Create a new thread for the forward
                     thread = Thread.objects.create(
                         ticket=ticket,
-                        user=request.user.user_instances.first(),
+                        user=agent_instance,
                         threadType='forward',
                         createdBy='agent',
                         message=forward_form.cleaned_data['message']
                     )
+                    create_agent_activity(agent_instance, ticket, 'agent_forwarded_ticket')
                     if forward_form.cleaned_data['status']:
                         ticket.status = forward_form.cleaned_data['status']
                         ticket.save()
-
-                    # Call the email sending utility for forward
                     from .email_utils import send_forward_email
                     try:
                         send_forward_email(
                             ticket,
-                            thread, # The newly created thread for the forward
+                            thread, 
                             forward_form.cleaned_data['to'],
                             forward_form.cleaned_data['subject']
                         )
@@ -996,6 +1196,7 @@ def ticket_view(request, ticket_id):
                     user_instance = get_or_create_user_instance(email)
                     if user_instance not in ticket.collaborators.all():
                         ticket.collaborators.add(user_instance)
+                        create_agent_activity(agent_instance, ticket, f"added_collaborator_{user_instance.user.email}")
                         added_count += 1
 
                 if added_count > 0:
@@ -1011,6 +1212,7 @@ def ticket_view(request, ticket_id):
             try:
                 user_instance_to_remove = UserInstance.objects.get(id=collaborator_id)
                 ticket.collaborators.remove(user_instance_to_remove)
+                create_agent_activity(agent_instance, ticket, f"removed_collaborator_{user_instance_to_remove.user.email}")
                 messages.success(request, f'Collaborator {user_instance_to_remove.user.email} removed successfully.')
             except UserInstance.DoesNotExist:
                 messages.error(request, 'Collaborator not found.')
@@ -1029,6 +1231,8 @@ def ticket_view(request, ticket_id):
     ticket_types = TicketType.objects.all()
     groups = SupportGroup.objects.all()
     teams = SupportTeam.objects.all()
+    tags = Tag.objects.all()
+    labels = SupportLabel.objects.filter(user=request.user.user_instances.first())
 
     context = {
         'view': 'Ticket View',
@@ -1038,12 +1242,14 @@ def ticket_view(request, ticket_id):
         'reply_form': reply_form,
         'note_form': note_form,
         'forward_form': forward_form,
-        'collaborator_form': collaborator_form, # Added this line
+        'collaborator_form': collaborator_form,
         'statuses': statuses,
         'priorities': priorities,
         'agents': agents,
         'ticket_types': ticket_types,
         'groups': groups,
         'teams': teams,
+        'tags': tags,
+        'labels': labels,
     }
     return render(request, 'ticket_view.html', context)

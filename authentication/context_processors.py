@@ -12,7 +12,7 @@ def permission_context(request):
 
     if request.user.is_authenticated:
         try:
-            user_instance = UserInstance.objects.get(user=request.user)
+            user_instance = UserInstance.objects.filter(user=request.user).first()
         except UserInstance.DoesNotExist:
             pass # User has no UserInstance
 

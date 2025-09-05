@@ -2,7 +2,6 @@
 {% load static %}
 
 {% block content %}
-<div class="content-wrapper">
     <!-- Content Header (Page header) -->
     <div class="content-header">
       <div class="container-fluid">
@@ -95,19 +94,19 @@
                         </div>
                     </div>
                 </div>
-<!--                <div class="col-lg-4 col-md-6">-->
-<!--                    <div class="card card-primary card-outline">-->
-<!--                        <div class="card-header">-->
-<!--                            <h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Reports</h3>-->
-<!--                        </div>-->
-<!--                        <div class="card-body p-0">-->
-<!--                            <ul class="list-group list-group-flush">-->
-<!--                                <li class="list-group-item"><a href="#"><i class="fas fa-chart-line fa-fw mr-2"></i> Agent Activity</a></li>-->
+                <div class="col-lg-4 col-md-6">
+                    <div class="card card-primary card-outline">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> Reports</h3>
+                        </div>
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item"><a href="{% url 'agent_activity_list' %}"><i class="fas fa-chart-line fa-fw mr-2"></i> Agent Activity</a></li>
 <!--                                <li class="list-group-item"><a href="#"><i class="fas fa-star fa-fw mr-2"></i> Kudos</a></li>-->
-<!--                            </ul>-->
-<!--                        </div>-->
-<!--                    </div>-->
-<!--                </div>-->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
                 <div class="col-lg-4 col-md-6">
                     <div class="card card-primary card-outline">
                         <div class="card-header">
@@ -132,5 +131,4 @@
         </div>
     </section>
     <!-- /.content -->
-</div>
 {% endblock %}

@@ -30,6 +30,7 @@ PRIVILEGE_CHOICES = {
         'ROLE_AGENT_MANAGE_WORKFLOW_MANUAL': 'Can manage Prepared Responses',
         'ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC': 'Can manage Automatic workflow',
         'ROLE_AGENT_MANAGE_TAG': 'Can manage tags',
+        'ROLE_AGENT_MANAGE_SUPPORT_LABEL': 'Can manage support labels',
         'ROLE_AGENT_MANAGE_KNOWLEDGEBASE': 'Can manage knowledgebase',
         'ROLE_AGENT_MANAGE_AGENT_ACTIVITY': "Can manage agent activity",
         'ROLE_AGENT_MANAGE_MARKETING_ANNOUNCEMENT': "Can manage marketing announcement",

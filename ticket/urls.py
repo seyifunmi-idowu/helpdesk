@@ -28,6 +28,12 @@ urlpatterns = [
     path('tags/<int:tag_id>/edit/', views.tag_edit, name='tag_edit'),
     path('tags/<int:tag_id>/delete/', views.tag_delete, name='tag_delete'),
 
+    # Support Labels
+    path('support-labels/', views.support_label_list, name='support_label_list'),
+    path('support-labels/create/', views.support_label_create, name='support_label_create'),
+    path('support-labels/<int:label_id>/edit/', views.support_label_edit, name='support_label_edit'),
+    path('support-labels/<int:label_id>/delete/', views.support_label_delete, name='support_label_delete'),
+
     # Saved Replies
     path('saved-replies/', views.saved_reply_list, name='saved_reply_list'),
     path('saved-replies/create/', views.saved_reply_create, name='saved_reply_create'),
@@ -39,6 +45,10 @@ urlpatterns = [
     path('prepared-responses/create/', views.prepared_response_create, name='prepared_response_create'),
     path('prepared-responses/<int:prepared_response_id>/edit/', views.prepared_response_edit, name='prepared_response_edit'),
     path('prepared-responses/<int:prepared_response_id>/delete/', views.prepared_response_delete, name='prepared_response_delete'),
+
+    # Agent Activities
+    path('agent-activities/', views.agent_activity_list, name='agent_activity_list'),
+    path('agent-activities/<int:activity_id>/', views.agent_activity_detail, name='agent_activity_detail'),
 
     # API endpoints
     path('api/tickets/', views.get_filtered_tickets_and_counts, name='get_filtered_tickets_and_counts'),

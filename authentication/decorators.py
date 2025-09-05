@@ -14,9 +14,8 @@ def admin_login_required(view_func):
 
         # Check if the user has an admin/agent UserInstance
         try:
-            user_instance = UserInstance.objects.get(user=request.user)
-            admin_roles = ADMIN_ROLES
-            if user_instance.supportRole and user_instance.supportRole.code in admin_roles:
+            user_instance = UserInstance.objects.get(user=request.user, supportRole__code__in=ADMIN_ROLES)
+            if user_instance:
                 return view_func(request, *args, **kwargs)
         except UserInstance.DoesNotExist:
             pass # User has no UserInstance, or not an admin/agent one
@@ -32,8 +31,8 @@ def customer_login_required(view_func):
 
         # Check if the user has a customer UserInstance
         try:
-            user_instance = UserInstance.objects.get(user=request.user)
-            if user_instance.supportRole and user_instance.supportRole.code == 'ROLE_CUSTOMER':
+            user_instance = UserInstance.objects.get(user=request.user, supportRole__code='ROLE_CUSTOMER')
+            if user_instance:
                 return view_func(request, *args, **kwargs)
         except UserInstance.DoesNotExist:
             pass # User has no UserInstance, or not a customer one
@@ -74,7 +73,7 @@ def permission_required(privilege_codes):
                 return redirect(reverse('login')) # Redirect to login page
 
             try:
-                user_instance = UserInstance.objects.get(user=request.user)
+                user_instance = UserInstance.objects.get(user=request.user, supportRole__code__in=ADMIN_ROLES)
             except UserInstance.DoesNotExist:
                 return redirect(reverse('dashboard')) # Redirect to dashboard or a generic error page
 

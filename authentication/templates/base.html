@@ -102,6 +102,18 @@
           <i class="fas fa-expand-arrows-alt"></i>
         </a>
       </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link" data-toggle="dropdown" href="#">
+            <i class="far fa-user"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+            <span class="dropdown-item dropdown-header">{% if user.is_authenticated %}{{ user.firstName }} {{ user.lastName }}{% else %}Guest{% endif %}</span>
+            <div class="dropdown-divider"></div>
+            <a href="{% url 'logout' %}" class="dropdown-item">
+                <i class="fas fa-sign-out-alt mr-2"></i> Log Out
+            </a>
+        </div>
+      </li>
     </ul>
   </nav>
   <!-- /.navbar -->
@@ -197,7 +209,7 @@
           </li>
           {% endif %}
 
-          {% if perms.ROLE_AGENT_MANAGE_WORKFLOW_MANUAL or perms.ROLE_AGENT_MANAGE_TAG or perms.ROLE_AGENT_MANAGE_TICKET_TYPE or perms.ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC %}
+          {% if perms.ROLE_AGENT_MANAGE_WORKFLOW_MANUAL or perms.ROLE_AGENT_MANAGE_TAG or perms.ROLE_AGENT_MANAGE_TICKET_TYPE or perms.ROLE_AGENT_MANAGE_WORKFLOW_AUTOMATIC or perms.ROLE_AGENT_MANAGE_SUPPORT_LABEL %}
           <li class="nav-item">
             <a href="#" class="nav-link">
               <i class="nav-icon fas fa-cogs"></i>
@@ -214,6 +226,9 @@
               {% if perms.ROLE_AGENT_MANAGE_TAG %}
               <li class="nav-item"><a href="{% url 'tag_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Tags</p></a></li>
               {% endif %}
+              {% if perms.ROLE_AGENT_MANAGE_SUPPORT_LABEL %}
+              <li class="nav-item"><a href="{% url 'support_label_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Support Labels</p></a></li>
+              {% endif %}
               {% if perms.ROLE_AGENT_MANAGE_TICKET_TYPE %}
               <li class="nav-item"><a href="{% url 'ticket_type_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Ticket Types</p></a></li>
               {% endif %}
@@ -224,19 +239,19 @@
           </li>
           {% endif %}
 
-<!--          <li class="nav-item">-->
-<!--            <a href="#" class="nav-link">-->
-<!--              <i class="nav-icon fas fa-chart-pie"></i>-->
-<!--              <p>-->
-<!--                Reports-->
-<!--                <i class="right fas fa-angle-left"></i>-->
-<!--              </p>-->
-<!--            </a>-->
-<!--            <ul class="nav nav-treeview">-->
-<!--              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Agent Activity</p></a></li>-->
+          <li class="nav-item">
+            <a href="#" class="nav-link">
+              <i class="nav-icon fas fa-chart-pie"></i>
+              <p>
+                Reports
+                <i class="right fas fa-angle-left"></i>
+              </p>
+            </a>
+            <ul class="nav nav-treeview">
+              <li class="nav-item"><a href="{% url 'agent_activity_list' %}" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Agent Activity</p></a></li>
 <!--              <li class="nav-item"><a href="#" class="nav-link"><i class="far fa-circle nav-icon"></i><p>Kudos</p></a></li>-->
-<!--            </ul>-->
-<!--          </li>-->
+            </ul>
+          </li>
 
           {% if perms.ROLE_AGENT_MANAGE_BRANDING or perms.ROLE_AGENT_MANAGE_EMAIL_SETTINGS or perms.ROLE_AGENT_MANAGE_EMAIL_TEMPLATE or perms.ROLE_AGENT_MANAGE_SPAM %}
           <li class="nav-item">
@@ -269,12 +284,26 @@
   </aside>
 
   <!-- Content Wrapper. Contains page content -->
+  <div class="content-wrapper">
+    {% if messages %}
+      <div class="container-fluid pt-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
 
-  {% block content %}
+    {% block content %}
 
 
 
-  {% endblock %}
+    {% endblock %}
+  </div>
 
 
   <!-- Control Sidebar -->

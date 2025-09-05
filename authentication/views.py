@@ -4,7 +4,8 @@ from django.contrib.auth.decorators import login_required
 from authentication.decorators import admin_login_required, customer_login_required, permission_required
 from django.http import JsonResponse
 from django.conf import settings
-from django.db.models import Count
+from django.db.models import Count, Q
+from ticket.models import Thread
 
 from .services import PrivilegeService, GroupService, TeamService
 from .constants import PRIVILEGE_CHOICES
@@ -276,17 +277,22 @@ def agent_invite(request):
             messages.error(request, "Email and First Name are required.")
             return render(request, "agent_invite.html", {"view": "Agents"})
 
-        if User.objects.filter(email=email).exists():
-            messages.error(request, f"A user with the email '{email}' already exists.")
-            return render(request, "agent_invite.html", {"view": "Agents"})
-
         # Create the user with an unusable password
-        user = User.objects.create_user(email=email, firstName=firstName, lastName=lastName)
-        user.set_unusable_password()
-        user.save()
+        user, created = User.objects.get_or_create(email=email, defaults={
+          'firstName': firstName,
+          'lastName': lastName,
+          'is_active': True
+        })
 
         # Create the user instance and assign the agent role
         agent_role, _ = SupportRole.objects.get_or_create(code='ROLE_AGENT')
+
+        if UserInstance.objects.filter(user=user, supportRole=agent_role).exists():
+            messages.error(request, f"A user with the email '{email}' already exists.")
+            return render(request, "agent_invite.html", {"view": "Agents"})
+
+        user.set_unusable_password()
+        user.save()
         UserInstance.objects.create(user=user, supportRole=agent_role, isActive=True, source='website')
 
         # Generate password set link (using Django's password reset mechanism)
@@ -317,7 +323,13 @@ def page404(request):
 @admin_login_required
 @permission_required('ROLE_AGENT_MANAGE_AGENT')
 def agent_list(request):
-    agents = UserInstance.objects.all().select_related('user')
+    agents = UserInstance.objects.filter(
+      supportRole__code__in=['ROLE_SUPER_ADMIN', 'ROLE_ADMIN', 'ROLE_AGENT']
+    ).select_related('user').annotate(
+        assigned_tickets=Count('tickets_as_agent', distinct=True),
+        answered_tickets=Count('thread', filter=Q(thread__threadType='reply'), distinct=True),
+        opened_tickets=Count('tickets_as_agent', filter=Q(tickets_as_agent__status__code='open'), distinct=True)
+    )
     context = {
         "view": "Agents",
         "user": request.user,

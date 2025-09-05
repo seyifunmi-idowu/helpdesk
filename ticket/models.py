@@ -115,6 +115,7 @@ class Attachment(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    colorCode = models.CharField(max_length=191, null=True, blank=True)
 
     class Meta:
         verbose_name = "Tag"

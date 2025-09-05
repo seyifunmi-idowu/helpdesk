@@ -2,7 +2,6 @@
 {% load static %}
 
 {% block content %}
-<div class="content-wrapper">
     <section class="content-header">
         <div class="container-fluid">
             <div class="row mb-2">
@@ -126,7 +125,6 @@
             </div>
         </div>
     </section>
-</div>
 
 {% block extra_js %}
 <script>
@@ -155,7 +153,7 @@
 
         let selectedArticleIds = new Set();
         const currentArticleId = {{ article.pk|default:0 }};
-        
+
 
         let addRelatedArticleUrl = '';
         let removeRelatedArticleUrl = '';
@@ -167,7 +165,7 @@
             getRelatedArticlesUrl = '{% url "get_related_articles_api" article.pk %}';
         {% endif %}
 
-        
+
 
         // Function to add a selected article to the list and send to backend
         function addSelectedArticle(articleId, articleName, skipApiCall = false) {

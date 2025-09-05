@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static ticket_filters %}
+
+{% block title %}Agent Activities{% endblock %}
+
+{% block content %}
+    <!-- Content Header (Page header) -->
+    <section class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1>Agent Activities</h1>
+          </div>
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+              <li class="breadcrumb-item active">Agent Activities</li>
+            </ol>
+          </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Agent Activity List</h3>
+                        <div class="card-tools">
+                            <form method="GET" class="form-inline">
+                                <input type="text" name="ticket_id" class="form-control form-control-sm mr-2" placeholder="Filter by Ticket ID" value="{{ ticket_id }}">
+                                <input type="text" name="agent_id" class="form-control form-control-sm mr-2" placeholder="Filter by Agent ID" value="{{ agent_id }}">
+                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                {% if ticket_id or agent_id %}
+                                    <a href="{% url 'agent_activity_list' %}" class="btn btn-secondary btn-sm ml-2">Clear Filters</a>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+                    <div class="card-body" style="overflow-x: auto;">
+                        {% if agent_activities %}
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Agent</th>
+                                    <th>Customer</th>
+                                    <th>Ticket ID</th>
+                                    <th>Activity Type</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in agent_activities %}
+                                <tr>
+                                    <td>{{ activity.id }}</td>
+                                    <td>{% if activity.agent %}{{ activity.agent.user.email }}{% else %}N/A{% endif %}</td>
+                                    <td>{% if activity.customerName %}{{ activity.customerName }}{% else %}N/A{% endif %}</td>
+                                    <td>{% if activity.ticket %}<a href="{% url 'ticket_view' activity.ticket.id %}">{{ activity.ticket.id }}</a>{% else %}N/A{% endif %}</td>
+                                    <td>{{ activity.threadType|replace:"_, "|capfirst }}</td>
+                                    <td>{{ activity.createdAt|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        <a href="{% url 'agent_activity_detail' activity.id %}" class="btn btn-info btn-sm">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <nav aria-label="Page navigation example">
+                            <ul class="pagination justify-content-center">
+                                {% if agent_activities.has_previous %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ agent_activities.previous_page_number }}{% if ticket_id %}&ticket_id={{ ticket_id }}{% endif %}{% if agent_id %}&agent_id={{ agent_id }}{% endif %}">Previous</a></li>
+                                {% else %}
+                                    <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                                {% endif %}
+
+                                {% for i in agent_activities.paginator.page_range %}
+                                    {% if agent_activities.number == i %}
+                                        <li class="page-item active"><a class="page-link" href="#">{{ i }}</a></li>
+                                    {% else %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% if ticket_id %}&ticket_id={{ ticket_id }}{% endif %}{% if agent_id %}&agent_id={{ agent_id }}{% endif %}">{{ i }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if agent_activities.has_next %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ agent_activities.next_page_number }}{% if ticket_id %}&ticket_id={{ ticket_id }}{% endif %}{% if agent_id %}&agent_id={{ agent_id }}{% endif %}">Next</a></li>
+                                {% else %}
+                                    <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% else %}
+                        <p>No agent activities found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div><!-- /.container-fluid -->
+    </section>
+    <!-- /.content -->
+{% endblock %}
